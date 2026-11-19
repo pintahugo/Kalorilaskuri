@@ -1,0 +1,18 @@
+{
+  "name": "kalori-makrovahti",
+  "version": "1.0.0",
+  "description": "Henkilökohtainen kalorien, aamupainon, makrojen, treenien ja palautumisen seurantasovellus",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "fitness",
+    "calories",
+    "macros",
+    "tracker"
+  ],
+  "author": "Hugo",
+  "license": "MIT"
+}

@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kalori- ja Makrovahti | Personal Fitness Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="brand-icon">⚡</div>
+        <div>
+          <h1>Kalori- ja Makrovahti</h1>
+          <p class="subtitle">Kalorien, aamupainon, makrotavoitteiden & palautumisen älykäs seuranta</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-generate-data" class="btn btn-secondary" title="Generoi 30 päivää realistista testidataa">
+          <span class="icon">🎲</span> Generoi testidataa (30 pv)
+        </button>
+        <div class="dropdown">
+          <button id="btn-export" class="btn btn-secondary">
+            <span class="icon">📥</span> Vie data ▾
+          </button>
+          <div class="dropdown-menu" id="export-menu">
+            <a href="/api/export?format=json" download="kalorivahti_vienti.json">JSON-tiedosto</a>
+            <a href="/api/export?format=csv" download="kalorivahti_vienti.csv">CSV (Excel-yhteensopiva)</a>
+          </div>
+        </div>
+        <button id="btn-open-modal" class="btn btn-primary">
+          <span class="icon">＋</span> Uusi merkintä
+        </button>
+      </div>
+    </header>
+
+    <!-- Top KPI Grid -->
+    <section class="kpi-grid">
+      <!-- KPI 1: Tänään / Viimeisin kalorit -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">Päivän kalorit</span>
+          <span class="kpi-badge" id="kpi-today-date">-</span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpi-today-cals">-</span>
+          <span class="kpi-unit">kcal</span>
+        </div>
+        <div class="kpi-target-info">
+          Tavoite: <strong id="kpi-target-cals">2400</strong> kcal
+          <span class="kpi-delta" id="kpi-today-delta">-</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="kpi-today-progress" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- KPI 2: 7 pv kalorikeskiarvo -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">7 pv kalorikeskiarvo</span>
+          <span class="kpi-badge info">Viikkokeskiarvo</span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpi-7d-cals">-</span>
+          <span class="kpi-unit">kcal / pv</span>
+        </div>
+        <div class="kpi-target-info">
+          Erotus tavoitteeseen: <span class="kpi-delta" id="kpi-7d-cal-delta">-</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill fill-accent" id="kpi-7d-cal-progress" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- KPI 3: Aamupaino & 7 pv liukuva paino -->
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">Aamupaino & Liukuva 7 pv</span>
+          <span class="kpi-badge success" id="kpi-weight-trend-badge">-</span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpi-current-weight">-</span>
+          <span class="kpi-unit">kg</span>
+        </div>
+        <div class="kpi-target-info">
+          7 pv liukuva keskiarvo: <strong id="kpi-7d-weight">-</strong> kg
+        </div>
+        <div class="kpi-subtext" id="kpi-weight-change-text">Trendi lasketaan tallennetuista päivistä</div>
+      </div>
+
+      <!-- KPI 4: Arvioitu TDEE (Kulutus) -->
+      <div class="kpi-card highlight-card">
+        <div class="kpi-header">
+          <span class="kpi-label">Arvioitu kulutus (TDEE)</span>
+          <span class="kpi-badge warning" id="tdee-status-badge">Vaatii dataa</span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpi-tdee-val">-</span>
+          <span class="kpi-unit">kcal / pv</span>
+        </div>
+        <div class="kpi-target-info" id="kpi-tdee-info">
+          Laskettu painotrendin ja kalorien perusteella
+        </div>
+        <div class="kpi-subtext" id="kpi-tdee-sub">Perustuu 7700 kcal / kg kaavaan</div>
+      </div>
+    </section>
+
+    <!-- Goal Selection & Intelligent Analytics Card -->
+    <section class="analytics-section">
+      <div class="analytics-card">
+        <div class="analytics-header">
+          <div class="analytics-title-group">
+            <span class="analytics-icon">🎯</span>
+            <div>
+              <h2>Tavoitetila & Älykäs Kalorisuositus</h2>
+              <p>Valitse tavoitteesi – sovellus analysoi kulutustrendisi ja optimoi kalori- ja makrotavoitteesi.</p>
+            </div>
+          </div>
+          <div class="goal-buttons" id="goal-selector">
+            <button class="goal-btn active" data-goal="fat_loss">
+              <span class="goal-icon">🔥</span>
+              <span class="goal-name">Painon pudotus</span>
+              <span class="goal-desc">-400 kcal/pv</span>
+            </button>
+            <button class="goal-btn" data-goal="maintenance">
+              <span class="goal-icon">⚖️</span>
+              <span class="goal-name">Ylläpito / Recomp</span>
+              <span class="goal-desc">±0 kcal (TDEE)</span>
+            </button>
+            <button class="goal-btn" data-goal="muscle_gain">
+              <span class="goal-icon">💪</span>
+              <span class="goal-name">Lihaskasvu (plussa)</span>
+              <span class="goal-desc">+250 kcal/pv</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="analytics-body">
+          <div class="analytics-insight" id="analytics-insight-box">
+            <div class="insight-main">
+              <div class="insight-recommendation">
+                <span class="rec-label">Suositeltu kaloritavoite:</span>
+                <span class="rec-calories" id="rec-cal-val">2400 kcal</span>
+                <button class="btn btn-small btn-success" id="btn-apply-rec" title="Aseta tämä suositus nykyiseksi kaloritavoitteeksi">
+                  ✓ Ota suositus käyttöön
+                </button>
+              </div>
+              <p class="insight-reasoning" id="rec-reasoning-text">
+                Lasketaan toteutuneen energiatasapainon mukaan...
+              </p>
+            </div>
+            <div class="insight-stats">
+              <div class="insight-stat-item">
+                <span class="stat-name">Painon viikkomuutos:</span>
+                <span class="stat-val" id="stat-weight-weekly-rate">- kg/vko</span>
+              </div>
+              <div class="insight-stat-item">
+                <span class="stat-name">Toteutunut energiavaje/-ylijäämä:</span>
+                <span class="stat-val" id="stat-energy-balance">- kcal/pv</span>
+              </div>
+              <div class="insight-stat-item">
+                <span class="stat-name">Aktivoitu perusasetus:</span>
+                <span class="stat-val" id="stat-current-target-cals">2400 kcal</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Macro Breakdown Section (Comparison of Targets vs Actuals) -->
+    <section class="macro-section">
+      <div class="section-title-row">
+        <div>
+          <h2>Päivän Makrotavoitteet vs. Toteuma</h2>
+          <p class="section-desc">
+            Proteiini = 2,0 g × paino | Rasva = 0,8 g × paino | Hiilihydraatit = loput kalorit (jaettuna 4 kcal/g)
+          </p>
+        </div>
+        <div class="macro-target-settings">
+          <label>Aktiivinen kaloritavoite:</label>
+          <div class="target-input-wrap">
+            <input type="number" id="global-calorie-target" value="2400" min="1200" max="6000" step="1">
+            <button id="btn-save-target" class="btn btn-small btn-secondary">Päivitä</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="macro-grid">
+        <!-- Proteiini -->
+        <div class="macro-card protein-card">
+          <div class="macro-card-header">
+            <span class="macro-tag protein-tag">Proteiini</span>
+            <span class="macro-formula">2,0 g / kg • 4 kcal/g</span>
+          </div>
+          <div class="macro-comparison">
+            <div class="macro-col">
+              <span class="col-title">Toteutunut</span>
+              <div class="macro-val-display">
+                <span class="val-big" id="macro-act-protein">-</span>
+                <span class="val-unit">g</span>
+              </div>
+              <span class="val-cal" id="macro-act-protein-cal">- kcal</span>
+            </div>
+            <div class="macro-divider">vs</div>
+            <div class="macro-col">
+              <span class="col-title">Tavoite</span>
+              <div class="macro-val-display">
+                <span class="val-big" id="macro-tgt-protein">-</span>
+                <span class="val-unit">g</span>
+              </div>
+              <span class="val-cal" id="macro-tgt-protein-cal">- kcal</span>
+            </div>
+          </div>
+          <div class="macro-progress-wrap">
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill bg-protein" id="bar-protein" style="width: 0%"></div>
+            </div>
+            <div class="macro-progress-footer">
+              <span id="pct-protein">0%</span>
+              <span id="diff-protein">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rasva -->
+        <div class="macro-card fat-card">
+          <div class="macro-card-header">
+            <span class="macro-tag fat-tag">Rasva</span>
+            <span class="macro-formula">0,8 g / kg • 9 kcal/g</span>
+          </div>
+          <div class="macro-comparison">
+            <div class="macro-col">
+              <span class="col-title">Toteutunut</span>
+              <div class="macro-val-display">
+                <span class="val-big" id="macro-act-fat">-</span>
+                <span class="val-unit">g</span>
+              </div>
+              <span class="val-cal" id="macro-act-fat-cal">- kcal</span>
+            </div>
+            <div class="macro-divider">vs</div>
+            <div class="macro-col">
+              <span class="col-title">Tavoite</span>
+              <div class="macro-val-display">
+                <span class="val-big" id="macro-tgt-fat">-</span>
+                <span class="val-unit">g</span>
+              </div>
+              <span class="val-cal" id="macro-tgt-fat-cal">- kcal</span>
+            </div>
+          </div>
+          <div class="macro-progress-wrap">
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill bg-fat" id="bar-fat" style="width: 0%"></div>
+            </div>
+            <div class="macro-progress-footer">
+              <span id="pct-fat">0%</span>
+              <span id="diff-fat">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hiilihydraatit -->
+        <div class="macro-card carbs-card">
+          <div class="macro-card-header">
+            <span class="macro-tag carbs-tag">Hiilihydraatit</span>
+            <span class="macro-formula">(Kalorit - P_kcal - R_kcal) / 4</span>
+          </div>
+          <div class="macro-comparison">
+            <div class="macro-col">
+              <span class="col-title">Toteutunut</span>
+              <div class="macro-val-display">
+                <span class="val-big" id="macro-act-carbs">-</span>
+                <span class="val-unit">g</span>
+              </div>
+              <span class="val-cal" id="macro-act-carbs-cal">- kcal</span>
+            </div>
+            <div class="macro-divider">vs</div>
+            <div class="macro-col">
+              <span class="col-title">Tavoite</span>
+              <div class="macro-val-display">
+                <span class="val-big" id="macro-tgt-carbs">-</span>
+                <span class="val-unit">g</span>
+              </div>
+              <span class="val-cal" id="macro-tgt-carbs-cal">- kcal</span>
+            </div>
+          </div>
+          <div class="macro-progress-wrap">
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill bg-carbs" id="bar-carbs" style="width: 0%"></div>
+            </div>
+            <div class="macro-progress-footer">
+              <span id="pct-carbs">0%</span>
+              <span id="diff-carbs">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Charts Section -->
+    <section class="charts-grid">
+      <!-- Chart 1: Weight & 7d Moving Average -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <h3>Aamupaino & 7 päivän liukuva keskiarvo</h3>
+            <p class="chart-sub">Päivittäiset mittaukset ja tasoitettu trendikäyrä</p>
+          </div>
+          <div class="chart-legend">
+            <span class="legend-item"><span class="legend-dot dot-weight"></span> Mittaus (kg)</span>
+            <span class="legend-item"><span class="legend-dot dot-ma"></span> 7 pv keskiarvo</span>
+          </div>
+        </div>
+        <div class="chart-container" id="weight-chart-container">
+          <svg id="weight-svg" class="responsive-svg" viewBox="0 0 800 320"></svg>
+          <div class="chart-tooltip" id="weight-tooltip"></div>
+        </div>
+      </div>
+
+      <!-- Chart 2: Calories vs Target -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <h3>Kalorit vs. Tavoite</h3>
+            <p class="chart-sub">Päivittäinen energiansaanti, tavoiteraja ja 7 pv liukuva keskiarvo</p>
+          </div>
+          <div class="chart-legend">
+            <span class="legend-item"><span class="legend-dot dot-cal-bar"></span> Kalorit (kcal)</span>
+            <span class="legend-item"><span class="legend-dot dot-target"></span> Tavoite</span>
+            <span class="legend-item"><span class="legend-dot dot-cal-ma"></span> 7 pv keskiarvo</span>
+          </div>
+        </div>
+        <div class="chart-container" id="calories-chart-container">
+          <svg id="calories-svg" class="responsive-svg" viewBox="0 0 800 320"></svg>
+          <div class="chart-tooltip" id="calories-tooltip"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Data Table & History Section -->
+    <section class="history-section">
+      <div class="section-title-row">
+        <div>
+          <h2>Merkintöjen historia</h2>
+          <p class="section-desc">Kaikki tallennetut päivät aikajärjestyksessä. Muokkaa tai poista merkintöjä riveittäin.</p>
+        </div>
+        <div class="table-actions">
+          <span class="entry-count-pill" id="entry-count-label">0 merkintää</span>
+          <button id="btn-reset-data" class="btn btn-small btn-danger" title="Tyhjennä kaikki merkinnät">
+            Tyhjennä data
+          </button>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table" id="entries-table">
+          <thead>
+            <tr>
+              <th>Päivämäärä</th>
+              <th>Aamupaino</th>
+              <th>Kalorit</th>
+              <th>Proteiini</th>
+              <th>Hiilarit</th>
+              <th>Rasva</th>
+              <th>Treeni & Fiilis</th>
+              <th>Uni / Palautuminen</th>
+              <th>Toiminnot</th>
+            </tr>
+          </thead>
+          <tbody id="entries-tbody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- Entry Modal (Add / Edit) -->
+  <div class="modal-backdrop" id="entry-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="modal-title">Uusi päiväkirjamerkintä</h3>
+        <button type="button" class="btn-close" id="btn-close-modal">✕</button>
+      </div>
+
+      <form id="entry-form">
+        <input type="hidden" id="entry-id" value="">
+
+        <div class="form-grid-2">
+          <!-- Date -->
+          <div class="form-group">
+            <label for="form-date">Päivämäärä <span class="req">*</span></label>
+            <input type="date" id="form-date" required>
+          </div>
+
+          <!-- Morning Weight -->
+          <div class="form-group">
+            <label for="form-weight">Aamupaino (kg) <span class="req">*</span></label>
+            <div class="input-with-unit">
+              <input type="number" id="form-weight" step="0.1" min="30" max="300" placeholder="esim. 78.5" required>
+              <span class="unit-tag">kg</span>
+            </div>
+            <span class="field-hint">Päivittää alla olevat makrosuositukset heti</span>
+          </div>
+        </div>
+
+        <!-- Calories -->
+        <div class="form-group">
+          <label for="form-calories">Päivän kalorit (kcal) <span class="req">*</span></label>
+          <div class="input-with-unit">
+            <input type="number" id="form-calories" min="500" max="10000" step="1" placeholder="esim. 2400" required>
+            <span class="unit-tag">kcal</span>
+          </div>
+        </div>
+
+        <!-- Dynamic Recommendation Callout -->
+        <div class="form-macro-preview" id="form-macro-preview">
+          <div class="macro-preview-header">
+            <span class="preview-title">Laskennallinen makrosuositus tälle painolle:</span>
+            <button type="button" id="btn-autofill-macros" class="btn btn-small btn-autofill">
+              ⚡ Täytä nämä toteutuneiksi
+            </button>
+          </div>
+          <div class="macro-preview-badges">
+            <div class="preview-badge badge-p">
+              <span>Proteiini (2 g/kg):</span>
+              <strong id="preview-p">-</strong> g
+            </div>
+            <div class="preview-badge badge-f">
+              <span>Rasva (0,8 g/kg):</span>
+              <strong id="preview-f">-</strong> g
+            </div>
+            <div class="preview-badge badge-c">
+              <span>Hiilarit (jäljelle jäävä):</span>
+              <strong id="preview-c">-</strong> g
+            </div>
+          </div>
+        </div>
+
+        <!-- Actual Macros (Optional) -->
+        <div class="form-fieldset">
+          <legend>Toteutuneet makrot (valinnaisia)</legend>
+          <div class="form-grid-3">
+            <div class="form-group">
+              <label for="form-protein">Proteiini</label>
+              <div class="input-with-unit">
+                <input type="number" id="form-protein" step="1" min="0" placeholder="g">
+                <span class="unit-tag">g</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="form-carbs">Hiilihydraatit</label>
+              <div class="input-with-unit">
+                <input type="number" id="form-carbs" step="1" min="0" placeholder="g">
+                <span class="unit-tag">g</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="form-fat">Rasva</label>
+              <div class="input-with-unit">
+                <input type="number" id="form-fat" step="1" min="0" placeholder="g">
+                <span class="unit-tag">g</span>
+              </div>
+            </div>
+          </div>
+          <div class="macros-sum-indicator" id="macro-sum-indicator">
+            Laskettu kalorimäärä makroista: <span id="macro-sum-kcal">0</span> kcal
+          </div>
+        </div>
+
+        <!-- Workout Section -->
+        <div class="form-fieldset">
+          <legend>Salitreeni & Liikunta</legend>
+          <div class="checkbox-row">
+            <label class="custom-checkbox">
+              <input type="checkbox" id="form-workout">
+              <span class="checkmark"></span>
+              <strong>Treenipäivä (salitreeni suoritettu)</strong>
+            </label>
+          </div>
+
+          <div id="workout-details-wrap" class="workout-details-wrap" style="display: none;">
+            <div class="form-group">
+              <label for="form-workout-notes">Treenin kuvaus / muistiinpano</label>
+              <input type="text" id="form-workout-notes" placeholder="esim. Jalkatreeni: kyykky 4x8, prässi...">
+            </div>
+            <div class="form-group">
+              <label>Treenin fiilis (1–5)</label>
+              <div class="star-rating" id="workout-mood-stars">
+                <button type="button" class="rating-btn" data-val="1">1 😫</button>
+                <button type="button" class="rating-btn" data-val="2">2 😕</button>
+                <button type="button" class="rating-btn" data-val="3">3 😐</button>
+                <button type="button" class="rating-btn" data-val="4">4 😊</button>
+                <button type="button" class="rating-btn" data-val="5">5 🔥</button>
+              </div>
+              <input type="hidden" id="form-workout-mood" value="">
+            </div>
+          </div>
+        </div>
+
+        <!-- Sleep / Recovery Section -->
+        <div class="form-fieldset">
+          <legend>Uni & Palautuminen (valinnainen 1–5)</legend>
+          <div class="star-rating" id="recovery-stars">
+            <button type="button" class="rating-btn" data-val="1">1 😴 Heikko</button>
+            <button type="button" class="rating-btn" data-val="2">2 🥱 Keskinkertainen</button>
+            <button type="button" class="rating-btn" data-val="3">3 😌 Kohtalainen</button>
+            <button type="button" class="rating-btn" data-val="4">4 ⚡ Hyvä</button>
+            <button type="button" class="rating-btn" data-val="5">5 🚀 Huippuvire</button>
+          </div>
+          <input type="hidden" id="form-recovery" value="">
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-modal">Peruuta</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-entry">Tallenna merkintä</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

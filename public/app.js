@@ -951,7 +951,7 @@ function renderMealsForActiveDate() {
 
   const ringPct = Math.min(1, totalCals / targetCals);
   el.ringCalProgress.style.strokeDashoffset = 440 - (ringPct * 440);
-  el.ringCalProgress.style.stroke = totalCals > targetCals + 200 ? '#f59e0b' : '#3b82f6';
+  el.ringCalProgress.style.stroke = totalCals > targetCals + 200 ? '#b45309' : '#1a4731';
 
   // Macro bars
   el.mealsPSummary.textContent = `${Math.round(totalP)} / ${macroTargets.protein} g`;
@@ -984,7 +984,7 @@ function renderMealGroupList(mealType, items, listElem, subElem) {
     row.className = 'meal-item-row';
     row.innerHTML = `
       <div class="meal-item-left">
-        <span class="mil-name">${escapeHtml(item.food_name)} ${item.brand ? `<small style="color:#64748b">(${escapeHtml(item.brand)})</small>` : ''}</span>
+        <span class="mil-name">${escapeHtml(item.food_name)} ${item.brand ? `<small style="color:#8a7d6e">(${escapeHtml(item.brand)})</small>` : ''}</span>
         <span class="mil-meta">${item.portion_g} g • P: ${item.protein} g | H: ${item.carbs} g | R: ${item.fat} g</span>
       </div>
       <div class="meal-item-right">
@@ -1234,7 +1234,7 @@ function searchLocalFoodCatalog(query) {
     item.className = 'food-result-item';
     item.innerHTML = `
       <div>
-        <strong>${escapeHtml(f.name)}</strong> ${f.brand ? `<small style="color:#64748b">(${escapeHtml(f.brand)})</small>` : ''}<br>
+        <strong>${escapeHtml(f.name)}</strong> ${f.brand ? `<small style="color:#8a7d6e">(${escapeHtml(f.brand)})</small>` : ''}<br>
         <small style="color:#94a3b8">${f.calories_100g} kcal / 100g • P: ${f.protein_100g}g | H: ${f.carbs_100g}g | R: ${f.fat_100g}g</small>
       </div>
       <button class="btn btn-small btn-secondary">Valitse</button>
@@ -1762,7 +1762,7 @@ function renderWeightChart(entries) {
   const tooltip = el.weightTooltip;
   svg.innerHTML = '';
   if (entries.length === 0) {
-    svg.innerHTML = `<text x="400" y="130" fill="#64748b" text-anchor="middle" font-size="14">Ei tallennettuja painomerkintöjä</text>`;
+    svg.innerHTML = `<text x="400" y="130" fill="#8a7d6e" text-anchor="middle" font-size="14">Ei tallennettuja painomerkintöjä</text>`;
     return;
   }
   const width = 800, height = 260, pad = { top: 20, right: 20, bottom: 35, left: 50 };
@@ -1780,8 +1780,8 @@ function renderWeightChart(entries) {
   for (let i = 0; i <= 4; i++) {
     const val = yMin + (i / 4) * (yMax - yMin);
     const y = getY(val);
-    svg.appendChild(createSvgElement('line', { x1: pad.left, y1: y, x2: width - pad.right, y2: y, stroke: '#232f48', 'stroke-width': 1, 'stroke-dasharray': i === 0 ? 'none' : '3,3' }));
-    const label = createSvgElement('text', { x: pad.left - 8, y: y + 4, fill: '#64748b', 'font-size': 10, 'text-anchor': 'end', 'font-family': 'JetBrains Mono, monospace' });
+    svg.appendChild(createSvgElement('line', { x1: pad.left, y1: y, x2: width - pad.right, y2: y, stroke: '#d4c9b0', 'stroke-width': 1, 'stroke-dasharray': i === 0 ? 'none' : '3,3' }));
+    const label = createSvgElement('text', { x: pad.left - 8, y: y + 4, fill: '#8a7d6e', 'font-size': 10, 'text-anchor': 'end', 'font-family': 'JetBrains Mono, monospace' });
     label.textContent = val.toFixed(1);
     svg.appendChild(label);
   }
@@ -1794,7 +1794,7 @@ function renderWeightChart(entries) {
     }
   });
   if (maPathD) {
-    svg.appendChild(createSvgElement('path', { d: maPathD, fill: 'none', stroke: '#f59e0b', 'stroke-width': 2.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+    svg.appendChild(createSvgElement('path', { d: maPathD, fill: 'none', stroke: '#b45309', 'stroke-width': 2.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
   }
 
   let weightPathD = '';
@@ -1802,11 +1802,11 @@ function renderWeightChart(entries) {
     const x = getX(i), y = getY(e.weight);
     weightPathD += (weightPathD === '' ? `M ${x} ${y}` : ` L ${x} ${y}`);
   });
-  svg.appendChild(createSvgElement('path', { d: weightPathD, fill: 'none', stroke: '#38bdf8', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', opacity: 0.85 }));
+  svg.appendChild(createSvgElement('path', { d: weightPathD, fill: 'none', stroke: '#1a4731', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', opacity: 0.85 }));
 
   entries.forEach((e, i) => {
     const x = getX(i), y = getY(e.weight);
-    const circle = createSvgElement('circle', { cx: x, cy: y, r: entries.length > 35 ? 2.5 : 4, fill: '#38bdf8', stroke: '#0a0e17', 'stroke-width': 1.5 });
+    const circle = createSvgElement('circle', { cx: x, cy: y, r: entries.length > 35 ? 2.5 : 4, fill: '#1a4731', stroke: '#fafaf7', 'stroke-width': 1.5 });
     svg.appendChild(circle);
 
     const hitArea = createSvgElement('circle', { cx: x, cy: y, r: 12, fill: 'transparent', style: 'cursor: pointer;' });
@@ -1820,14 +1820,14 @@ function renderWeightChart(entries) {
     });
     hitArea.addEventListener('mouseleave', () => {
       circle.setAttribute('r', entries.length > 35 ? '2.5' : '4');
-      circle.setAttribute('fill', '#38bdf8');
+      circle.setAttribute('fill', '#1a4731');
       tooltip.style.opacity = '0';
     });
     svg.appendChild(hitArea);
 
     const step = Math.ceil(entries.length / 7);
     if (i % step === 0 || i === entries.length - 1) {
-      const text = createSvgElement('text', { x, y: height - 10, fill: '#64748b', 'font-size': 9, 'text-anchor': 'middle', 'font-family': 'JetBrains Mono, monospace' });
+      const text = createSvgElement('text', { x, y: height - 10, fill: '#8a7d6e', 'font-size': 9, 'text-anchor': 'middle', 'font-family': 'JetBrains Mono, monospace' });
       text.textContent = e.date.substring(5);
       svg.appendChild(text);
     }
@@ -1839,7 +1839,7 @@ function renderCaloriesChart(entries) {
   const tooltip = el.caloriesTooltip;
   svg.innerHTML = '';
   if (entries.length === 0) {
-    svg.innerHTML = `<text x="400" y="130" fill="#64748b" text-anchor="middle" font-size="14">Ei tallennettuja kalorimerkintöjä</text>`;
+    svg.innerHTML = `<text x="400" y="130" fill="#8a7d6e" text-anchor="middle" font-size="14">Ei tallennettuja kalorimerkintöjä</text>`;
     return;
   }
   const width = 800, height = 260, pad = { top: 20, right: 20, bottom: 35, left: 50 };
@@ -1855,14 +1855,14 @@ function renderCaloriesChart(entries) {
   for (let i = 0; i <= 4; i++) {
     const val = Math.round(yMin + (i / 4) * (yMax - yMin));
     const y = getY(val);
-    svg.appendChild(createSvgElement('line', { x1: pad.left, y1: y, x2: width - pad.right, y2: y, stroke: '#232f48', 'stroke-width': 1, 'stroke-dasharray': i === 0 ? 'none' : '3,3' }));
-    const label = createSvgElement('text', { x: pad.left - 8, y: y + 4, fill: '#64748b', 'font-size': 10, 'text-anchor': 'end', 'font-family': 'JetBrains Mono, monospace' });
+    svg.appendChild(createSvgElement('line', { x1: pad.left, y1: y, x2: width - pad.right, y2: y, stroke: '#d4c9b0', 'stroke-width': 1, 'stroke-dasharray': i === 0 ? 'none' : '3,3' }));
+    const label = createSvgElement('text', { x: pad.left - 8, y: y + 4, fill: '#8a7d6e', 'font-size': 10, 'text-anchor': 'end', 'font-family': 'JetBrains Mono, monospace' });
     label.textContent = val;
     svg.appendChild(label);
   }
 
   const targetY = getY(targetCals);
-  svg.appendChild(createSvgElement('line', { x1: pad.left, y1: targetY, x2: width - pad.right, y2: targetY, stroke: '#ef4444', 'stroke-width': 1.5, 'stroke-dasharray': '5,5' }));
+  svg.appendChild(createSvgElement('line', { x1: pad.left, y1: targetY, x2: width - pad.right, y2: targetY, stroke: '#b91c1c', 'stroke-width': 1.5, 'stroke-dasharray': '5,5' }));
 
   const count = entries.length;
   const barSlotW = plotW / count;
@@ -1873,12 +1873,12 @@ function renderCaloriesChart(entries) {
     const barY = getY(e.calories);
     const barHeight = Math.max(2, (pad.top + plotH) - barY);
 
-    const rect = createSvgElement('rect', { x: barX, y: barY, width: barW, height: barHeight, fill: '#3b82f6', rx: 2, opacity: 0.85 });
+    const rect = createSvgElement('rect', { x: barX, y: barY, width: barW, height: barHeight, fill: '#1a4731', rx: 2, opacity: 0.85 });
     svg.appendChild(rect);
 
     const hitArea = createSvgElement('rect', { x: pad.left + i * barSlotW, y: pad.top, width: barSlotW, height: plotH, fill: 'transparent', style: 'cursor: pointer;' });
     hitArea.addEventListener('mouseenter', () => {
-      rect.setAttribute('fill', '#60a5fa');
+      rect.setAttribute('fill', '#2d6a4f');
       const dDiff = e.calories - targetCals;
       const dSign = dDiff > 0 ? `+${dDiff}` : `${dDiff}`;
       tooltip.innerHTML = `<strong>${formatDateFi(e.date)}</strong><br>Kalorit: <strong>${e.calories} kcal</strong> (${dSign})<br>Tavoite: <strong>${targetCals} kcal</strong><br>7 pv ka: <strong>${e.ma7Calories || '-'} kcal</strong>`;
@@ -1887,14 +1887,14 @@ function renderCaloriesChart(entries) {
       tooltip.style.top = `${Math.max(10, barY - 55)}px`;
     });
     hitArea.addEventListener('mouseleave', () => {
-      rect.setAttribute('fill', '#3b82f6');
+      rect.setAttribute('fill', '#1a4731');
       tooltip.style.opacity = '0';
     });
     svg.appendChild(hitArea);
 
     const step = Math.ceil(entries.length / 7);
     if (i % step === 0 || i === entries.length - 1) {
-      const text = createSvgElement('text', { x: pad.left + i * barSlotW + barSlotW / 2, y: height - 10, fill: '#64748b', 'font-size': 9, 'text-anchor': 'middle', 'font-family': 'JetBrains Mono, monospace' });
+      const text = createSvgElement('text', { x: pad.left + i * barSlotW + barSlotW / 2, y: height - 10, fill: '#8a7d6e', 'font-size': 9, 'text-anchor': 'middle', 'font-family': 'JetBrains Mono, monospace' });
       text.textContent = e.date.substring(5);
       svg.appendChild(text);
     }
@@ -1908,7 +1908,7 @@ function renderCaloriesChart(entries) {
     }
   });
   if (calMaPathD) {
-    svg.appendChild(createSvgElement('path', { d: calMaPathD, fill: 'none', stroke: '#10b981', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+    svg.appendChild(createSvgElement('path', { d: calMaPathD, fill: 'none', stroke: '#2d6a4f', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
   }
 }
 
@@ -1916,7 +1916,7 @@ function renderTable(entries) {
   const tbody = el.entriesTbody;
   tbody.innerHTML = '';
   if (entries.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #64748b; padding: 28px;">Ei merkintöjä. Aloita lisäämällä merkintä tai kokeile esimerkkidataa!</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #8a7d6e; padding: 28px;">Ei merkintöjä. Aloita lisäämällä merkintä tai kokeile esimerkkidataa!</td></tr>`;
     return;
   }
 
@@ -1928,7 +1928,7 @@ function renderTable(entries) {
 
     const recoveryContent = e.recovery
       ? `<span>${e.recovery}/5</span>`
-      : `<span style="color:#64748b">-</span>`;
+      : `<span style="color:#8a7d6e">-</span>`;
 
     tr.innerHTML = `
       <td class="td-date">${e.date}</td>

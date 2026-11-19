@@ -57,7 +57,7 @@ Sovellus on 100 % staattinen asiakaspuolen sovellus, joten se voidaan julkaista 
 
 1. **Luo yksityinen tai julkinen repositorio GitHubissa**:
    ```bash
-   cd /Users/hugo/.gemini/antigravity/scratch/kalorilaskuri
+   cd kalorilaskuri
    git remote add origin https://github.com/KAYTTAJANIMI/kalorilaskuri.git
    git branch -M main
    git push -u origin main

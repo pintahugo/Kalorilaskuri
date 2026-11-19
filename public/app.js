@@ -1,13 +1,42 @@
 /**
- * Kalori- ja Makrovahti - Frontend Application Logic
- * Lifesum Nutrition + Barcode Scanner + Strong Workout Logger
+ * Kalori- ja Makrovahti - Client-Side Privacy-First PWA Engine
+ * All personal data is stored 100% locally on the user's device (localStorage).
+ * Works offline, on GitHub Pages, and on local servers with zero data leakage.
  */
 
-// Global State
+// Local Storage Keys
+const STORAGE_KEYS = {
+  SETTINGS: 'makrovahti_settings',
+  ENTRIES: 'makrovahti_entries',
+  MEALS: 'makrovahti_meals',
+  WORKOUTS: 'makrovahti_workouts',
+  FOODS: 'makrovahti_foods'
+};
+
+// Default generic food items for offline & quick demo use (no personal data)
+const DEFAULT_FOOD_CATALOG = [
+  { barcode: '6408430043121', name: 'Raejuusto perinteinen', brand: 'Valio', calories_100g: 95, protein_100g: 16, carbs_100g: 1.8, fat_100g: 2.5, serving_size_g: 150 },
+  { barcode: '6411300000123', name: 'Pehmeä maitorahka', brand: 'Valio', calories_100g: 60, protein_100g: 10, carbs_100g: 4.2, fat_100g: 0.3, serving_size_g: 250 },
+  { barcode: '6411200100456', name: 'Täysjyväkaurahiutale', brand: 'Elovena', calories_100g: 365, protein_100g: 14, carbs_100g: 55, fat_100g: 7.5, serving_size_g: 50 },
+  { barcode: '6409100010012', name: 'Kanan rintafilee maustamaton', brand: 'Atria', calories_100g: 105, protein_100g: 23, carbs_100g: 0, fat_100g: 1.5, serving_size_g: 200 },
+  { barcode: '6409100020021', name: 'Lohifilee tuore', brand: 'Kalaneuvos', calories_100g: 205, protein_100g: 20, carbs_100g: 0, fat_100g: 14, serving_size_g: 150 },
+  { barcode: '6405200030034', name: 'Kananmuna vapaan kanan (L)', brand: 'Kultamuna', calories_100g: 137, protein_100g: 12.5, carbs_100g: 0.3, fat_100g: 9.7, serving_size_g: 60 },
+  { barcode: '6413467012345', name: 'Reissumies Täysjyväruisleipä', brand: 'Oululainen', calories_100g: 230, protein_100g: 9, carbs_100g: 42, fat_100g: 1.5, serving_size_g: 55 },
+  { barcode: '6410400040045', name: 'Basmatiriisi', brand: 'Risella', calories_100g: 350, protein_100g: 8.5, carbs_100g: 77, fat_100g: 1.0, serving_size_g: 75 },
+  { barcode: '6430012345678', name: 'Hera80 Proteiinijauhe Suklaa', brand: 'Fast', calories_100g: 390, protein_100g: 76, carbs_100g: 6.5, fat_100g: 6.5, serving_size_g: 30 },
+  { barcode: '2000000010001', name: 'Banaani tuore', brand: 'Chiquita', calories_100g: 89, protein_100g: 1.1, carbs_100g: 22.8, fat_100g: 0.3, serving_size_g: 120 }
+];
+
+// App State
 const state = {
   entries: [],
+  meals: [],
+  workouts: [],
+  foods: [],
   settings: {
     calorie_target: 2400,
+    protein_factor: 2.0,
+    fat_factor: 0.8,
     goal_mode: 'maintenance'
   },
   activeDate: new Date().toISOString().split('T')[0],
@@ -24,26 +53,35 @@ const state = {
   cameraFacing: 'environment'
 };
 
-// DOM References
+// DOM Elements Cache
 const el = {
-  // Tabs
   navTabs: document.getElementById('main-nav-tabs'),
   tabContents: document.querySelectorAll('.tab-content'),
+  welcomeBanner: document.getElementById('welcome-banner'),
+  btnWelcomeAdd: document.getElementById('btn-welcome-add'),
+  btnWelcomeDemo: document.getElementById('btn-welcome-demo'),
 
-  // Header & Global Modals
-  btnGenerateData: document.getElementById('btn-generate-data'),
-  btnExport: document.getElementById('btn-export'),
-  exportMenu: document.getElementById('export-menu'),
-  importFileInput: document.getElementById('import-file-input'),
+  btnOpenSettings: document.getElementById('btn-open-settings'),
+  settingsModal: document.getElementById('settings-modal'),
+  btnCloseSettings: document.getElementById('btn-close-settings'),
+  settingCalTarget: document.getElementById('setting-cal-target'),
+  settingProteinFactor: document.getElementById('setting-protein-factor'),
+  settingFatFactor: document.getElementById('setting-fat-factor'),
+  btnSaveSettings: document.getElementById('btn-save-settings'),
+  btnExportJson: document.getElementById('btn-export-json'),
+  btnExportCsv: document.getElementById('btn-export-csv'),
+  settingsImportFile: document.getElementById('settings-import-file'),
+  btnLoadDemoData: document.getElementById('btn-load-demo-data'),
+  btnClearAllData: document.getElementById('btn-clear-all-data'),
+
   btnOpenModal: document.getElementById('btn-open-modal'),
   btnCloseModal: document.getElementById('btn-close-modal'),
   btnCancelModal: document.getElementById('btn-cancel-modal'),
   entryModal: document.getElementById('entry-modal'),
   entryForm: document.getElementById('entry-form'),
   modalTitle: document.getElementById('modal-title'),
-  btnResetData: document.getElementById('btn-reset-data'),
 
-  // Dashboard KPIs
+  // KPIs
   kpiTodayDate: document.getElementById('kpi-today-date'),
   kpiTodayCals: document.getElementById('kpi-today-cals'),
   kpiTargetCals: document.getElementById('kpi-target-cals'),
@@ -60,7 +98,7 @@ const el = {
   tdeeStatusBadge: document.getElementById('tdee-status-badge'),
   kpiTdeeInfo: document.getElementById('kpi-tdee-info'),
 
-  // Analytics & Goals
+  // Goal & Analytics
   goalSelector: document.getElementById('goal-selector'),
   recCalVal: document.getElementById('rec-cal-val'),
   btnApplyRec: document.getElementById('btn-apply-rec'),
@@ -69,9 +107,12 @@ const el = {
   statEnergyBalance: document.getElementById('stat-energy-balance'),
   statCurrentTargetCals: document.getElementById('stat-current-target-cals'),
 
-  // Dashboard Macro Section
+  // Macro Section
   globalCalorieTarget: document.getElementById('global-calorie-target'),
   btnSaveTarget: document.getElementById('btn-save-target'),
+  macroFormulaDesc: document.getElementById('macro-formula-desc'),
+  formulaPTag: document.getElementById('formula-p-tag'),
+  formulaFTag: document.getElementById('formula-f-tag'),
   macroActProtein: document.getElementById('macro-act-protein'),
   macroActProteinCal: document.getElementById('macro-act-protein-cal'),
   macroTgtProtein: document.getElementById('macro-tgt-protein'),
@@ -100,7 +141,7 @@ const el = {
   caloriesSvg: document.getElementById('calories-svg'),
   caloriesTooltip: document.getElementById('calories-tooltip'),
 
-  // Table
+  // History Table
   entriesTbody: document.getElementById('entries-tbody'),
   entryCountLabel: document.getElementById('entry-count-label'),
 
@@ -125,7 +166,7 @@ const el = {
   formRecovery: document.getElementById('form-recovery'),
   recoveryStars: document.getElementById('recovery-stars'),
 
-  // Lifesum Meals Tab
+  // Meals Tab
   mealsActiveDate: document.getElementById('meals-active-date'),
   btnPrevDay: document.getElementById('btn-prev-day'),
   btnNextDay: document.getElementById('btn-next-day'),
@@ -142,7 +183,6 @@ const el = {
   mealsCBar: document.getElementById('meals-c-bar'),
   mealsFSummary: document.getElementById('meals-f-summary'),
   mealsFBar: document.getElementById('meals-f-bar'),
-
   subBreakfast: document.getElementById('sub-breakfast'),
   subLunch: document.getElementById('sub-lunch'),
   subDinner: document.getElementById('sub-dinner'),
@@ -206,18 +246,32 @@ const el = {
 };
 
 /**
+ * Register Service Worker for PWA
+ */
+if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((err) => {
+      console.log('ServiceWorker registration skipped or failed:', err);
+    });
+  });
+}
+
+/**
  * Macro calculation rules:
- * - Protein: 2.0 g * weight (kg) (4 kcal/g)
- * - Fat: 0.8 g * weight (kg) (9 kcal/g)
+ * - Protein: protein_factor (default 2.0 g) * weight (kg) (4 kcal/g)
+ * - Fat: fat_factor (default 0.8 g) * weight (kg) (9 kcal/g)
  * - Carbs: max(0, round((calorieTarget - proteinKcal - fatKcal) / 4))
  */
 function calculateRecommendedMacros(weightKg, calorieTarget) {
   if (!weightKg || weightKg <= 0) {
     return { protein: 0, fat: 0, carbs: 0, proteinKcal: 0, fatKcal: 0, carbsKcal: 0 };
   }
-  const protein = Math.round(weightKg * 2.0);
+  const pFactor = state.settings.protein_factor || 2.0;
+  const fFactor = state.settings.fat_factor || 0.8;
+
+  const protein = Math.round(weightKg * pFactor);
   const proteinKcal = protein * 4;
-  const fat = Math.round(weightKg * 0.8);
+  const fat = Math.round(weightKg * fFactor);
   const fatKcal = fat * 9;
   const remainingKcal = (calorieTarget || 2400) - proteinKcal - fatKcal;
   const carbs = Math.max(0, Math.round(remainingKcal / 4));
@@ -227,7 +281,7 @@ function calculateRecommendedMacros(weightKg, calorieTarget) {
 }
 
 /**
- * Sound chime synthesizer using Web Audio API
+ * Web Audio API synthesizer chime
  */
 function playAudioChime() {
   try {
@@ -238,8 +292,8 @@ function playAudioChime() {
     const gain = ctx.createGain();
 
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15); // A5
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15);
 
     gain.gain.setValueAtTime(0.3, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
@@ -254,26 +308,229 @@ function playAudioChime() {
 }
 
 /**
- * Main Initialization
+ * =========================================================================
+ * CLIENT-SIDE DATA STORAGE ENGINE (localStorage)
+ * =========================================================================
  */
-async function init() {
+function loadDataFromStorage() {
+  try {
+    // Settings
+    const storedSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    if (storedSettings) {
+      state.settings = { ...state.settings, ...JSON.parse(storedSettings) };
+    }
+
+    // Entries
+    const storedEntries = localStorage.getItem(STORAGE_KEYS.ENTRIES);
+    state.entries = storedEntries ? JSON.parse(storedEntries) : [];
+
+    // Meals
+    const storedMeals = localStorage.getItem(STORAGE_KEYS.MEALS);
+    state.meals = storedMeals ? JSON.parse(storedMeals) : [];
+
+    // Workouts
+    const storedWorkouts = localStorage.getItem(STORAGE_KEYS.WORKOUTS);
+    state.workouts = storedWorkouts ? JSON.parse(storedWorkouts) : [];
+
+    // Foods (Product memory)
+    const storedFoods = localStorage.getItem(STORAGE_KEYS.FOODS);
+    if (storedFoods) {
+      state.foods = JSON.parse(storedFoods);
+    } else {
+      state.foods = [...DEFAULT_FOOD_CATALOG];
+      saveToStorage(STORAGE_KEYS.FOODS, state.foods);
+    }
+  } catch (err) {
+    console.error('Storage load error:', err);
+  }
+}
+
+function saveToStorage(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.error('Storage save error for key:', key, err);
+  }
+}
+
+function saveAllStateToStorage() {
+  saveToStorage(STORAGE_KEYS.SETTINGS, state.settings);
+  saveToStorage(STORAGE_KEYS.ENTRIES, state.entries);
+  saveToStorage(STORAGE_KEYS.MEALS, state.meals);
+  saveToStorage(STORAGE_KEYS.WORKOUTS, state.workouts);
+  saveToStorage(STORAGE_KEYS.FOODS, state.foods);
+}
+
+/**
+ * Recalculate and update the day's total calories & macros from logged meals
+ */
+function syncDayTotalsFromMeals(dateStr) {
+  const dayMeals = state.meals.filter(m => m.date === dateStr);
+  const totalCals = dayMeals.reduce((sum, m) => sum + (m.calories || 0), 0);
+  const totalP = dayMeals.reduce((sum, m) => sum + (m.protein || 0), 0);
+  const totalC = dayMeals.reduce((sum, m) => sum + (m.carbs || 0), 0);
+  const totalF = dayMeals.reduce((sum, m) => sum + (m.fat || 0), 0);
+
+  const entry = state.entries.find(e => e.date === dateStr);
+  if (entry) {
+    entry.calories = Math.round(totalCals);
+    entry.protein = Math.round(totalP * 10) / 10;
+    entry.carbs = Math.round(totalC * 10) / 10;
+    entry.fat = Math.round(totalF * 10) / 10;
+    saveToStorage(STORAGE_KEYS.ENTRIES, state.entries);
+  }
+}
+
+/**
+ * =========================================================================
+ * DEMO DATA GENERATOR (100% Client-Side Synthetic Mock Data)
+ * =========================================================================
+ */
+function generateDemoData() {
+  const now = new Date();
+  let currentWeight = 79.2;
+  const targetCals = state.settings.calorie_target || 2400;
+
+  state.entries = [];
+  state.meals = [];
+  state.workouts = [];
+
+  const workoutTemplates = [
+    { name: 'Push / Työntävät', exercises: ['Penkkipunnerrus tangolla', 'Pystypunnerrus tangolla', 'Ojentajapunnerrus taljassa'] },
+    { name: 'Pull / Vetävät', exercises: ['Maastaveto', 'Leuanveto lisäpainolla', 'Hauiskääntö tangolla'] },
+    { name: 'Legs / Jalat', exercises: ['Takakyykky tangolla', 'Jalkaprässi', 'Reiden koukistus laitteessa'] }
+  ];
+
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+
+    const dayOfWeek = d.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+    let calDev = Math.random() * 260 - 130;
+    if (isWeekend) calDev += 180;
+    const dayCalories = Math.round(targetCals + calDev);
+
+    const deltaKg = (dayCalories - 2450) / 7700;
+    currentWeight = Math.round((currentWeight + deltaKg * 0.4 + (Math.random() * 0.3 - 0.15)) * 10) / 10;
+    currentWeight = Math.max(76.0, Math.min(82.0, currentWeight));
+
+    // Generate 4 meals
+    const dayP = Math.round(currentWeight * 2.0 + (Math.random() * 10 - 5));
+    const dayF = Math.round(currentWeight * 0.8 + (Math.random() * 8 - 4));
+    const dayC = Math.max(50, Math.round((dayCalories - dayP * 4 - dayF * 9) / 4));
+
+    state.meals.push(
+      { id: Date.now() + Math.random(), date: dateStr, meal_type: 'breakfast', food_name: 'Täysjyväkaurahiutale', brand: 'Elovena', barcode: '6411200100456', portion_g: 60, calories: 219, protein: 8.4, carbs: 33, fat: 4.5 },
+      { id: Date.now() + Math.random(), date: dateStr, meal_type: 'lunch', food_name: 'Kanan rintafilee maustamaton', brand: 'Atria', barcode: '6409100010012', portion_g: 200, calories: 210, protein: 46, carbs: 0, fat: 3 },
+      { id: Date.now() + Math.random(), date: dateStr, meal_type: 'dinner', food_name: 'Lohifilee tuore', brand: 'Kalaneuvos', barcode: '6409100020021', portion_g: 150, calories: 308, protein: 30, carbs: 0, fat: 21 },
+      { id: Date.now() + Math.random(), date: dateStr, meal_type: 'snack', food_name: 'Pehmeä maitorahka', brand: 'Valio', barcode: '6411300000123', portion_g: 250, calories: 150, protein: 25, carbs: 10.5, fat: 0.8 }
+    );
+
+    // Workout ~ 4 times a week
+    const isWorkout = (dayOfWeek !== 3 && dayOfWeek !== 0) || Math.random() > 0.65;
+    let workoutNotes = '';
+    let workoutMood = null;
+
+    if (isWorkout) {
+      const template = workoutTemplates[Math.floor(Math.random() * workoutTemplates.length)];
+      workoutNotes = template.name;
+      workoutMood = Math.floor(Math.random() * 2) + 4;
+
+      const sets = [];
+      template.exercises.forEach(ex => {
+        let baseW = ex.includes('Kyykky') ? 100 : (ex.includes('Maastaveto') ? 130 : 70);
+        sets.push(
+          { exercise_name: ex, set_order: 1, weight_kg: baseW * 0.7, reps: 10, rpe: 6, completed: 1 },
+          { exercise_name: ex, set_order: 2, weight_kg: baseW, reps: 8, rpe: 8, completed: 1 },
+          { exercise_name: ex, set_order: 3, weight_kg: baseW, reps: 8, rpe: 8.5, completed: 1 }
+        );
+      });
+
+      state.workouts.push({
+        id: Date.now() + Math.random(),
+        date: dateStr,
+        name: template.name,
+        notes: 'Hyvä nousujohteinen treeni.',
+        duration_min: 65,
+        rating: workoutMood,
+        sets
+      });
+    }
+
+    state.entries.push({
+      id: Date.now() + Math.random(),
+      date: dateStr,
+      weight: currentWeight,
+      calories: dayCalories,
+      protein: dayP,
+      carbs: dayC,
+      fat: dayF,
+      workout: isWorkout ? 1 : 0,
+      workout_notes: workoutNotes,
+      workout_mood: workoutMood,
+      recovery: Math.random() > 0.15 ? Math.floor(Math.random() * 2) + 4 : 3
+    });
+  }
+
+  saveAllStateToStorage();
+}
+
+/**
+ * =========================================================================
+ * INITIALIZATION & EVENTS
+ * =========================================================================
+ */
+function init() {
+  loadDataFromStorage();
+  applySettingsToUI();
   bindNavigationTabs();
-  bindEvents();
-  setupLifesumMealsEvents();
-  setupBarcodeScannerEvents();
-  setupStrongWorkoutEvents();
+  bindSettingsModalEvents();
+  bindDayFormEvents();
+  bindLifesumMealsEvents();
+  bindBarcodeScannerEvents();
+  bindStrongWorkoutEvents();
 
   el.mealsActiveDate.value = state.activeDate;
   el.workoutSessionDate.value = state.activeDate;
 
-  await loadSettings();
-  await loadEntries();
-  await loadMealsForDate(state.activeDate);
-  await loadPastWorkouts();
+  refreshAllViews();
+}
+
+function applySettingsToUI() {
+  const s = state.settings;
+  el.globalCalorieTarget.value = s.calorie_target;
+  el.kpiTargetCals.textContent = s.calorie_target;
+  el.settingCalTarget.value = s.calorie_target;
+  el.settingProteinFactor.value = s.protein_factor || 2.0;
+  el.settingFatFactor.value = s.fat_factor || 0.8;
+
+  el.formulaPTag.textContent = `${s.protein_factor || 2.0} g / kg • 4 kcal/g`;
+  el.formulaFTag.textContent = `${s.fat_factor || 0.8} g / kg • 9 kcal/g`;
+  el.macroFormulaDesc.textContent = `Proteiini = ${s.protein_factor || 2.0} g × paino | Rasva = ${s.fat_factor || 0.8} g × paino | Hiilarit = loput kalorit (4 kcal/g)`;
+
+  document.querySelectorAll('.goal-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.goal === s.goal_mode);
+  });
+}
+
+function refreshAllViews() {
+  updateDashboard();
+  renderMealsForActiveDate();
+  renderPastWorkouts();
+
+  // Show welcome banner if user has 0 entries
+  if (state.entries.length === 0) {
+    el.welcomeBanner.style.display = 'flex';
+  } else {
+    el.welcomeBanner.style.display = 'none';
+  }
 }
 
 /**
- * Tab Navigation
+ * Navigation Tabs
  */
 function bindNavigationTabs() {
   el.navTabs.addEventListener('click', (e) => {
@@ -285,131 +542,187 @@ function bindNavigationTabs() {
     el.tabContents.forEach(tc => tc.classList.remove('active'));
 
     btn.classList.add('active');
-    const targetContent = document.getElementById(tabId);
-    if (targetContent) targetContent.classList.add('active');
+    const target = document.getElementById(tabId);
+    if (target) target.classList.add('active');
 
-    // Trigger tab-specific refreshes
-    if (tabId === 'tab-meals') {
-      loadMealsForDate(state.activeDate);
-    } else if (tabId === 'tab-workout') {
-      loadPastWorkouts();
-    } else if (tabId === 'tab-dashboard') {
-      updateDashboard();
-    }
+    if (tabId === 'tab-meals') renderMealsForActiveDate();
+    if (tabId === 'tab-workout') renderPastWorkouts();
+    if (tabId === 'tab-dashboard') updateDashboard();
+  });
+
+  // Welcome banner buttons
+  el.btnWelcomeAdd.addEventListener('click', () => openDayModal());
+  el.btnWelcomeDemo.addEventListener('click', () => {
+    generateDemoData();
+    refreshAllViews();
   });
 }
 
 /**
- * Global Event Bindings
+ * Settings & Data Management Modal
  */
-function bindEvents() {
-  // Day modal toggle
-  el.btnOpenModal.addEventListener('click', () => openDayModal());
-  el.btnCloseModal.addEventListener('click', () => closeDayModal());
-  el.btnCancelModal.addEventListener('click', () => closeDayModal());
-  el.entryModal.addEventListener('click', (e) => {
-    if (e.target === el.entryModal) closeDayModal();
+function bindSettingsModalEvents() {
+  el.btnOpenSettings.addEventListener('click', () => {
+    el.settingsModal.classList.add('open');
   });
 
-  // Dropdown
-  el.btnExport.addEventListener('click', (e) => {
-    e.stopPropagation();
-    el.exportMenu.classList.toggle('show');
-  });
-  window.addEventListener('click', () => {
-    el.exportMenu.classList.remove('show');
+  el.btnCloseSettings.addEventListener('click', () => {
+    el.settingsModal.classList.remove('open');
   });
 
-  // Import file
-  el.importFileInput.addEventListener('change', async (e) => {
+  el.settingsModal.addEventListener('click', (e) => {
+    if (e.target === el.settingsModal) el.settingsModal.classList.remove('open');
+  });
+
+  // Save Settings
+  el.btnSaveSettings.addEventListener('click', () => {
+    state.settings.calorie_target = parseInt(el.settingCalTarget.value, 10) || 2400;
+    state.settings.protein_factor = parseFloat(el.settingProteinFactor.value) || 2.0;
+    state.settings.fat_factor = parseFloat(el.settingFatFactor.value) || 0.8;
+    saveToStorage(STORAGE_KEYS.SETTINGS, state.settings);
+    applySettingsToUI();
+    refreshAllViews();
+    el.settingsModal.classList.remove('open');
+  });
+
+  // Quick Calorie Target input in Macro Section
+  el.btnSaveTarget.addEventListener('click', () => {
+    const val = parseInt(el.globalCalorieTarget.value, 10);
+    if (val && val >= 1000 && val <= 8000) {
+      state.settings.calorie_target = val;
+      el.settingCalTarget.value = val;
+      saveToStorage(STORAGE_KEYS.SETTINGS, state.settings);
+      applySettingsToUI();
+      refreshAllViews();
+    }
+  });
+
+  // Goal Mode selector
+  el.goalSelector.addEventListener('click', (e) => {
+    const btn = e.target.closest('.goal-btn');
+    if (!btn) return;
+    state.settings.goal_mode = btn.dataset.goal;
+    saveToStorage(STORAGE_KEYS.SETTINGS, state.settings);
+    document.querySelectorAll('.goal-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    updateAnalytics();
+  });
+
+  // Apply recommendation button
+  el.btnApplyRec.addEventListener('click', () => {
+    const recCal = parseInt(el.recCalVal.textContent, 10);
+    if (recCal && !isNaN(recCal)) {
+      state.settings.calorie_target = recCal;
+      saveToStorage(STORAGE_KEYS.SETTINGS, state.settings);
+      applySettingsToUI();
+      refreshAllViews();
+    }
+  });
+
+  // Export JSON
+  el.btnExportJson.addEventListener('click', () => {
+    const exportData = {
+      version: '1.0',
+      exported_at: new Date().toISOString(),
+      settings: state.settings,
+      entries: state.entries,
+      meals: state.meals,
+      workouts: state.workouts,
+      foods: state.foods
+    };
+    downloadFile(JSON.stringify(exportData, null, 2), 'kalorivahti_varmuuskopio.json', 'application/json');
+  });
+
+  // Export CSV
+  el.btnExportCsv.addEventListener('click', () => {
+    const headers = ['Päivämäärä', 'Aamupaino_kg', 'Kalorit_kcal', 'Proteiini_g', 'Hiilarit_g', 'Rasva_g', 'Treeni', 'Kuvaus', 'Fiilis', 'Uni'];
+    const lines = [headers.join(';')];
+    state.entries.forEach(r => {
+      lines.push([
+        r.date,
+        r.weight,
+        r.calories,
+        r.protein !== null ? r.protein : '',
+        r.carbs !== null ? r.carbs : '',
+        r.fat !== null ? r.fat : '',
+        r.workout ? 'Kyllä' : 'Ei',
+        `"${(r.workout_notes || '').replace(/"/g, '""')}"`,
+        r.workout_mood || '',
+        r.recovery || ''
+      ].join(';'));
+    });
+    downloadFile('\uFEFF' + lines.join('\n'), 'kalorivahti_historia.csv', 'text/csv;charset=utf-8;');
+  });
+
+  // Import JSON
+  el.settingsImportFile.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     try {
       const text = await file.text();
-      const parsed = JSON.parse(text);
-      const res = await fetch('/api/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(parsed)
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert('Tiedot tuotu onnistuneesti!');
-        await loadEntries();
-        await loadMealsForDate(state.activeDate);
-      }
+      const imported = JSON.parse(text);
+      if (imported.settings) state.settings = { ...state.settings, ...imported.settings };
+      if (Array.isArray(imported.entries)) state.entries = imported.entries;
+      if (Array.isArray(imported.meals)) state.meals = imported.meals;
+      if (Array.isArray(imported.workouts)) state.workouts = imported.workouts;
+      if (Array.isArray(imported.foods)) state.foods = imported.foods;
+      saveAllStateToStorage();
+      applySettingsToUI();
+      refreshAllViews();
+      alert('Varmuuskopio palautettu onnistuneesti!');
+      el.settingsModal.classList.remove('open');
     } catch (err) {
       alert('Virhe tiedoston tuonnissa: ' + err.message);
     }
   });
 
-  // Generate random data
-  el.btnGenerateData.addEventListener('click', async () => {
-    if (confirm('Generoidaanko 30 päivää realistista testidataa (ateriat, treenit, paino)? Tämä korvaa nykyisen datan.')) {
-      try {
-        const res = await fetch('/api/generate-random', { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-          await loadEntries();
-          await loadMealsForDate(state.activeDate);
-          await loadPastWorkouts();
-          alert('30 päivää realistista testidataa luotu onnistuneesti!');
-        }
-      } catch (err) {
-        alert('Virhe: ' + err.message);
-      }
+  // Load Demo Data Button
+  el.btnLoadDemoData.addEventListener('click', () => {
+    if (confirm('Ladataanko 30 päivää realistista esimerkkidataa (demo)? Tämä korvaa nykyisen paikallisen datasi.')) {
+      generateDemoData();
+      refreshAllViews();
+      el.settingsModal.classList.remove('open');
     }
   });
 
-  // Reset
-  el.btnResetData.addEventListener('click', async () => {
-    if (confirm('Haluatko varmasti tyhjentää kaikki tiedot?')) {
-      try {
-        await fetch('/api/reset', { method: 'POST' });
-        await loadEntries();
-        await loadMealsForDate(state.activeDate);
-        await loadPastWorkouts();
-      } catch (err) {
-        alert('Virhe: ' + err.message);
-      }
+  // Clear All Data Button (Fresh Clean Slate)
+  el.btnClearAllData.addEventListener('click', () => {
+    if (confirm('Haluatko varmasti tyhjentää kaikki omat merkinnät ja aloittaa puhtaalta pöydältä? Tätä ei voi perua ilman varmuuskopiota.')) {
+      state.entries = [];
+      state.meals = [];
+      state.workouts = [];
+      saveAllStateToStorage();
+      refreshAllViews();
+      el.settingsModal.classList.remove('open');
     }
   });
+}
 
-  // Goal Selector
-  el.goalSelector.addEventListener('click', async (e) => {
-    const btn = e.target.closest('.goal-btn');
-    if (!btn) return;
-    state.settings.goal_mode = btn.dataset.goal;
-    document.querySelectorAll('.goal-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    await saveSettings();
-    updateAnalytics();
+function downloadFile(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * =========================================================================
+ * DAY FORM & CRUD (Aamupaino, kalorit & nopeat merkinnät)
+ * =========================================================================
+ */
+function bindDayFormEvents() {
+  el.btnOpenModal.addEventListener('click', () => openDayModal());
+  el.btnCloseModal.addEventListener('click', closeDayModal);
+  el.btnCancelModal.addEventListener('click', closeDayModal);
+  el.entryModal.addEventListener('click', (e) => {
+    if (e.target === el.entryModal) closeDayModal();
   });
 
-  // Apply recommendation
-  el.btnApplyRec.addEventListener('click', async () => {
-    const recCal = parseInt(el.recCalVal.textContent, 10);
-    if (recCal && !isNaN(recCal)) {
-      state.settings.calorie_target = recCal;
-      el.globalCalorieTarget.value = recCal;
-      await saveSettings();
-      updateDashboard();
-      updateMealsOverview();
-    }
-  });
-
-  // Target input
-  el.btnSaveTarget.addEventListener('click', async () => {
-    const newTarget = parseInt(el.globalCalorieTarget.value, 10);
-    if (newTarget && newTarget >= 500 && newTarget <= 10000) {
-      state.settings.calorie_target = newTarget;
-      await saveSettings();
-      updateDashboard();
-      updateMealsOverview();
-    }
-  });
-
-  // Real-time macro preview in form modal
   const onWeightOrCalChange = () => {
     const weight = parseFloat(el.formWeight.value);
     const cals = parseInt(el.formCalories.value, 10) || state.settings.calorie_target;
@@ -461,85 +774,119 @@ function bindEvents() {
   el.entryForm.addEventListener('submit', handleDayFormSubmit);
 }
 
-function setupRatingButtons(container, hiddenInput) {
-  container.addEventListener('click', (e) => {
-    const btn = e.target.closest('.rating-btn');
-    if (!btn) return;
-    const val = btn.dataset.val;
-    if (hiddenInput.value === val) {
-      hiddenInput.value = '';
-      btn.classList.remove('active');
-    } else {
-      hiddenInput.value = val;
-      container.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+function openDayModal(id = null) {
+  if (id) {
+    el.modalTitle.textContent = 'Muokkaa päiväkirjamerkintää';
+    const entry = state.entries.find(e => e.id === id);
+    if (entry) {
+      el.entryId.value = entry.id;
+      el.formDate.value = entry.date;
+      el.formWeight.value = entry.weight;
+      el.formCalories.value = entry.calories;
+      el.formProtein.value = entry.protein !== null ? entry.protein : '';
+      el.formCarbs.value = entry.carbs !== null ? entry.carbs : '';
+      el.formFat.value = entry.fat !== null ? entry.fat : '';
+      el.formWorkout.checked = !!entry.workout;
+      el.workoutDetailsWrap.style.display = entry.workout ? 'flex' : 'none';
+      el.formWorkoutNotes.value = entry.workout_notes || '';
+      setRatingActive(el.workoutMoodStars, el.formWorkoutMood, entry.workout_mood);
+      setRatingActive(el.recoveryStars, el.formRecovery, entry.recovery);
+
+      const rec = calculateRecommendedMacros(entry.weight, entry.calories);
+      el.previewP.textContent = rec.protein;
+      el.previewF.textContent = rec.fat;
+      el.previewC.textContent = rec.carbs;
     }
-  });
+  } else {
+    el.modalTitle.textContent = 'Uusi päiväkirjamerkintä';
+    el.entryForm.reset();
+    el.entryId.value = '';
+    el.formDate.value = state.activeDate;
+    el.formCalories.value = state.settings.calorie_target || 2400;
+
+    if (state.entries.length > 0) {
+      const latest = state.entries[state.entries.length - 1];
+      el.formWeight.value = latest.weight;
+      const rec = calculateRecommendedMacros(latest.weight, state.settings.calorie_target);
+      el.previewP.textContent = rec.protein;
+      el.previewF.textContent = rec.fat;
+      el.previewC.textContent = rec.carbs;
+    }
+    el.workoutDetailsWrap.style.display = 'none';
+    setRatingActive(el.workoutMoodStars, el.formWorkoutMood, null);
+    setRatingActive(el.recoveryStars, el.formRecovery, null);
+  }
+  el.entryModal.classList.add('open');
 }
 
-function setRatingActive(container, hiddenInput, value) {
-  hiddenInput.value = value || '';
-  container.querySelectorAll('.rating-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.val === String(value));
-  });
+function closeDayModal() {
+  el.entryModal.classList.remove('open');
 }
 
-/**
- * Backend Data Loaders
- */
-async function loadSettings() {
-  try {
-    const res = await fetch('/api/settings');
-    const data = await res.json();
-    if (data.success && data.settings) {
-      state.settings = data.settings;
-      el.globalCalorieTarget.value = state.settings.calorie_target;
-      el.kpiTargetCals.textContent = state.settings.calorie_target;
-      document.querySelectorAll('.goal-btn').forEach(b => {
-        b.classList.toggle('active', b.dataset.goal === state.settings.goal_mode);
+function handleDayFormSubmit(e) {
+  e.preventDefault();
+  const id = el.entryId.value;
+  const date = el.formDate.value;
+  const weight = parseFloat(el.formWeight.value);
+  const calories = parseInt(el.formCalories.value, 10);
+  const protein = el.formProtein.value !== '' ? parseFloat(el.formProtein.value) : null;
+  const carbs = el.formCarbs.value !== '' ? parseFloat(el.formCarbs.value) : null;
+  const fat = el.formFat.value !== '' ? parseFloat(el.formFat.value) : null;
+  const workout = el.formWorkout.checked ? 1 : 0;
+  const workout_notes = el.formWorkoutNotes.value.trim();
+  const workout_mood = el.formWorkoutMood.value ? parseInt(el.formWorkoutMood.value, 10) : null;
+  const recovery = el.formRecovery.value ? parseInt(el.formRecovery.value, 10) : null;
+
+  if (id) {
+    const entry = state.entries.find(en => String(en.id) === String(id));
+    if (entry) {
+      Object.assign(entry, { date, weight, calories, protein, carbs, fat, workout, workout_notes, workout_mood, recovery });
+    }
+  } else {
+    // Check if entry for date exists
+    const existing = state.entries.find(en => en.date === date);
+    if (existing) {
+      Object.assign(existing, { weight, calories, protein, carbs, fat, workout, workout_notes, workout_mood, recovery });
+    } else {
+      state.entries.push({
+        id: Date.now(),
+        date,
+        weight,
+        calories,
+        protein,
+        carbs,
+        fat,
+        workout,
+        workout_notes,
+        workout_mood,
+        recovery
       });
     }
-  } catch (err) {
-    console.error('Virhe asetusten haussa:', err);
   }
+
+  saveToStorage(STORAGE_KEYS.ENTRIES, state.entries);
+  closeDayModal();
+  refreshAllViews();
 }
 
-async function saveSettings() {
-  try {
-    await fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(state.settings)
-    });
-    el.kpiTargetCals.textContent = state.settings.calorie_target;
-  } catch (err) {
-    console.error('Virhe asetusten tallennuksessa:', err);
+window.editDayEntry = (id) => openDayModal(id);
+window.deleteDayEntry = (id) => {
+  if (confirm('Poistetaanko tämä merkintä?')) {
+    state.entries = state.entries.filter(e => String(e.id) !== String(id));
+    saveToStorage(STORAGE_KEYS.ENTRIES, state.entries);
+    refreshAllViews();
   }
-}
-
-async function loadEntries() {
-  try {
-    const res = await fetch('/api/entries');
-    const data = await res.json();
-    if (data.success) {
-      state.entries = data.entries || [];
-      updateDashboard();
-    }
-  } catch (err) {
-    console.error('Virhe merkintöjen haussa:', err);
-  }
-}
+};
 
 /**
  * =========================================================================
- * LIFESUM-TYYLINEN ATERIA- JA RUOKAPÄIVÄKIRJA
+ * LIFESUM MEAL TRACKER & FOOD SCANNER
  * =========================================================================
  */
-function setupLifesumMealsEvents() {
-  // Date navigation
+function bindLifesumMealsEvents() {
   el.mealsActiveDate.addEventListener('change', () => {
     state.activeDate = el.mealsActiveDate.value;
-    loadMealsForDate(state.activeDate);
+    renderMealsForActiveDate();
   });
 
   el.btnPrevDay.addEventListener('click', () => {
@@ -547,7 +894,7 @@ function setupLifesumMealsEvents() {
     d.setDate(d.getDate() - 1);
     state.activeDate = d.toISOString().split('T')[0];
     el.mealsActiveDate.value = state.activeDate;
-    loadMealsForDate(state.activeDate);
+    renderMealsForActiveDate();
   });
 
   el.btnNextDay.addEventListener('click', () => {
@@ -555,16 +902,15 @@ function setupLifesumMealsEvents() {
     d.setDate(d.getDate() + 1);
     state.activeDate = d.toISOString().split('T')[0];
     el.mealsActiveDate.value = state.activeDate;
-    loadMealsForDate(state.activeDate);
+    renderMealsForActiveDate();
   });
 
   el.btnToday.addEventListener('click', () => {
     state.activeDate = new Date().toISOString().split('T')[0];
     el.mealsActiveDate.value = state.activeDate;
-    loadMealsForDate(state.activeDate);
+    renderMealsForActiveDate();
   });
 
-  // "＋ Lisää" on individual meal cards
   document.querySelectorAll('.btn-add-to-meal').forEach(btn => {
     btn.addEventListener('click', () => {
       state.currentMealType = btn.dataset.meal;
@@ -573,85 +919,65 @@ function setupLifesumMealsEvents() {
     });
   });
 
-  el.btnOpenScanner.addEventListener('click', () => {
-    openFoodModal('scanner');
-  });
-
-  el.btnQuickAddFood.addEventListener('click', () => {
-    openFoodModal('search');
-  });
-
-  // Portion input live calculator
+  el.btnOpenScanner.addEventListener('click', () => openFoodModal('scanner'));
+  el.btnQuickAddFood.addEventListener('click', () => openFoodModal('search'));
   el.mealPortionG.addEventListener('input', updatePortionCalculations);
-
-  // Add calculated product to meal
   el.btnAddFoodToMeal.addEventListener('click', handleAddFoodToMeal);
 }
 
-async function loadMealsForDate(date) {
-  try {
-    const res = await fetch(`/api/meals?date=${date}`);
-    const data = await res.json();
-    if (data.success) {
-      state.activeMealsData = data;
-      renderMealsView(data);
-    }
-  } catch (err) {
-    console.error('Virhe ateriatietojen haussa:', err);
-  }
-}
+function renderMealsForActiveDate() {
+  const dateStr = state.activeDate;
+  const dayMeals = state.meals.filter(m => m.date === dateStr);
 
-function renderMealsView(data) {
-  const summary = data.summary;
+  const totalCals = dayMeals.reduce((sum, m) => sum + (m.calories || 0), 0);
+  const totalP = dayMeals.reduce((sum, m) => sum + (m.protein || 0), 0);
+  const totalC = dayMeals.reduce((sum, m) => sum + (m.carbs || 0), 0);
+  const totalF = dayMeals.reduce((sum, m) => sum + (m.fat || 0), 0);
+
   const targetCals = state.settings.calorie_target || 2400;
 
-  // Find morning weight for this day if recorded, else latest weight
-  const dayEntry = state.entries.find(e => e.date === data.date);
+  // Use recorded day weight or latest weight for dynamic macro targets
+  const dayEntry = state.entries.find(e => e.date === dateStr);
   const latestEntry = state.entries.length > 0 ? state.entries[state.entries.length - 1] : null;
   const currentWeight = dayEntry ? dayEntry.weight : (latestEntry ? latestEntry.weight : 78);
 
   const macroTargets = calculateRecommendedMacros(currentWeight, targetCals);
 
-  // Remaining calories
-  const eatenCals = summary.calories;
-  const remainingCals = Math.max(0, targetCals - eatenCals);
-  el.mealsRemainCals.textContent = remainingCals;
-  el.mealsEatenCals.textContent = eatenCals;
+  // Calorie ring
+  const remaining = Math.max(0, targetCals - totalCals);
+  el.mealsRemainCals.textContent = remaining;
+  el.mealsEatenCals.textContent = Math.round(totalCals);
   el.mealsTargetCals.textContent = targetCals;
 
-  // Calorie SVG progress ring (circumference = 2 * PI * 70 = ~440)
-  const ringPct = Math.min(1, eatenCals / targetCals);
-  const ringOffset = 440 - (ringPct * 440);
-  el.ringCalProgress.style.strokeDashoffset = ringOffset;
-  el.ringCalProgress.style.stroke = eatenCals > targetCals + 200 ? '#f59e0b' : '#3b82f6';
+  const ringPct = Math.min(1, totalCals / targetCals);
+  el.ringCalProgress.style.strokeDashoffset = 440 - (ringPct * 440);
+  el.ringCalProgress.style.stroke = totalCals > targetCals + 200 ? '#f59e0b' : '#3b82f6';
 
-  // Macros progress
-  el.mealsPSummary.textContent = `${Math.round(summary.protein)} / ${macroTargets.protein} g`;
-  el.mealsPBar.style.width = `${Math.min(100, Math.round((summary.protein / macroTargets.protein) * 100))}%`;
+  // Macro bars
+  el.mealsPSummary.textContent = `${Math.round(totalP)} / ${macroTargets.protein} g`;
+  el.mealsPBar.style.width = `${Math.min(100, Math.round((totalP / macroTargets.protein) * 100))}%`;
 
-  el.mealsCSummary.textContent = `${Math.round(summary.carbs)} / ${macroTargets.carbs} g`;
-  el.mealsCBar.style.width = `${Math.min(100, Math.round((summary.carbs / macroTargets.carbs) * 100))}%`;
+  el.mealsCSummary.textContent = `${Math.round(totalC)} / ${macroTargets.carbs} g`;
+  el.mealsCBar.style.width = `${Math.min(100, Math.round((totalC / macroTargets.carbs) * 100))}%`;
 
-  el.mealsFSummary.textContent = `${Math.round(summary.fat)} / ${macroTargets.fat} g`;
-  el.mealsFBar.style.width = `${Math.min(100, Math.round((summary.fat / macroTargets.fat) * 100))}%`;
+  el.mealsFSummary.textContent = `${Math.round(totalF)} / ${macroTargets.fat} g`;
+  el.mealsFBar.style.width = `${Math.min(100, Math.round((totalF / macroTargets.fat) * 100))}%`;
 
-  // Render individual meal blocks
-  renderMealCategory('breakfast', summary.by_meal.breakfast, el.listBreakfast, el.subBreakfast);
-  renderMealCategory('lunch', summary.by_meal.lunch, el.listLunch, el.subLunch);
-  renderMealCategory('dinner', summary.by_meal.dinner, el.listDinner, el.subDinner);
-  renderMealCategory('snack', summary.by_meal.snack, el.listSnack, el.subSnack);
+  // Render meal groups
+  renderMealGroupList('breakfast', dayMeals.filter(m => m.meal_type === 'breakfast'), el.listBreakfast, el.subBreakfast);
+  renderMealGroupList('lunch', dayMeals.filter(m => m.meal_type === 'lunch'), el.listLunch, el.subLunch);
+  renderMealGroupList('dinner', dayMeals.filter(m => m.meal_type === 'dinner'), el.listDinner, el.subDinner);
+  renderMealGroupList('snack', dayMeals.filter(m => m.meal_type === 'snack'), el.listSnack, el.subSnack);
 }
 
-function renderMealCategory(mealType, items, listElem, subElem) {
+function renderMealGroupList(mealType, items, listElem, subElem) {
   let subCals = 0;
   listElem.innerHTML = '';
-
   if (!items || items.length === 0) {
     listElem.innerHTML = `<div class="empty-meal-msg">Ei vielä ruokia</div>`;
     subElem.textContent = '0 kcal';
     return;
   }
-
   items.forEach(item => {
     subCals += item.calories;
     const row = document.createElement('div');
@@ -663,35 +989,27 @@ function renderMealCategory(mealType, items, listElem, subElem) {
       </div>
       <div class="meal-item-right">
         <span class="mil-cals">${Math.round(item.calories)} kcal</span>
-        <button class="btn-del-item" onclick="window.deleteMealItem(${item.id})" title="Poista ruoka">✕</button>
+        <button class="btn-del-item" onclick="window.deleteMealItem('${item.id}')" title="Poista ruoka">✕</button>
       </div>
     `;
     listElem.appendChild(row);
   });
-
   subElem.textContent = `${Math.round(subCals)} kcal`;
 }
 
-window.deleteMealItem = async (id) => {
-  try {
-    const res = await fetch(`/api/meals/${id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (data.success) {
-      await loadMealsForDate(state.activeDate);
-      await loadEntries();
-    }
-  } catch (err) {
-    alert('Virhe poistettaessa ruokaa: ' + err.message);
-  }
+window.deleteMealItem = (id) => {
+  state.meals = state.meals.filter(m => String(m.id) !== String(id));
+  saveToStorage(STORAGE_KEYS.MEALS, state.meals);
+  syncDayTotalsFromMeals(state.activeDate);
+  refreshAllViews();
 };
 
 /**
  * =========================================================================
- * VIIVAKOODI- & QR-SKANNERI SEKÄ OPEN FOOD FACTS -INTEGRAATIO
+ * BARCODE SCANNER & OPEN FOOD FACTS (Direct Browser Fetch)
  * =========================================================================
  */
-function setupBarcodeScannerEvents() {
-  // Modal toggle & tabs
+function bindBarcodeScannerEvents() {
   el.btnCloseFoodModal.addEventListener('click', closeFoodModal);
   el.foodModal.addEventListener('click', (e) => {
     if (e.target === el.foodModal) closeFoodModal();
@@ -701,11 +1019,9 @@ function setupBarcodeScannerEvents() {
   el.tabBtnSearch.addEventListener('click', () => switchFoodModalTab('search'));
   el.tabBtnManual.addEventListener('click', () => switchFoodModalTab('manual'));
 
-  // Camera toggle & switch
   el.btnToggleCamera.addEventListener('click', toggleCamera);
   el.btnSwitchCamera.addEventListener('click', switchCameraFacing);
 
-  // Manual barcode search button
   el.btnFetchBarcode.addEventListener('click', () => {
     const code = el.manualBarcodeInput.value.trim();
     if (code) lookupBarcode(code);
@@ -719,7 +1035,6 @@ function setupBarcodeScannerEvents() {
     }
   });
 
-  // Quick test chips
   document.querySelectorAll('.chip-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const code = btn.dataset.code;
@@ -728,38 +1043,27 @@ function setupBarcodeScannerEvents() {
     });
   });
 
-  // Live text search in food memory
-  el.foodSearchInput.addEventListener('input', debounce(async () => {
+  el.foodSearchInput.addEventListener('input', debounce(() => {
     const q = el.foodSearchInput.value.trim();
-    searchFoodMemory(q);
-  }, 250));
+    searchLocalFoodCatalog(q);
+  }, 200));
 
-  // Manual product creation
-  el.createFoodForm.addEventListener('submit', async (e) => {
+  el.createFoodForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const payload = {
+    const food = {
       name: document.getElementById('mf-name').value.trim(),
       brand: document.getElementById('mf-brand').value.trim(),
       barcode: document.getElementById('mf-barcode').value.trim() || null,
       calories_100g: parseFloat(document.getElementById('mf-cal').value),
       protein_100g: parseFloat(document.getElementById('mf-p').value || 0),
       carbs_100g: parseFloat(document.getElementById('mf-c').value || 0),
-      fat_100g: parseFloat(document.getElementById('mf-f').value || 0)
+      fat_100g: parseFloat(document.getElementById('mf-f').value || 0),
+      serving_size_g: 100
     };
 
-    try {
-      const res = await fetch('/api/foods', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      if (data.success && data.food) {
-        selectProductForPortion(data.food);
-      }
-    } catch (err) {
-      alert('Virhe tuotteen tallennuksessa: ' + err.message);
-    }
+    state.foods.push(food);
+    saveToStorage(STORAGE_KEYS.FOODS, state.foods);
+    selectProductForPortion(food);
   });
 }
 
@@ -784,25 +1088,17 @@ function switchFoodModalTab(tabName) {
   el.viewSearch.style.display = tabName === 'search' ? 'flex' : 'none';
   el.viewManualFood.style.display = tabName === 'manual' ? 'block' : 'none';
 
-  if (tabName === 'scanner') {
-    startCamera();
-  } else {
-    stopCamera();
-  }
+  if (tabName === 'scanner') startCamera();
+  else stopCamera();
 
-  if (tabName === 'search') {
-    searchFoodMemory(el.foodSearchInput.value.trim());
-  }
+  if (tabName === 'search') searchLocalFoodCatalog(el.foodSearchInput.value.trim());
 }
 
-/**
- * Camera stream and barcode detection
- */
 async function startCamera() {
   if (state.scannerStream) return;
   try {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      showScannerStatus('Kameratukea ei ole saatavilla tässä selaimessa. Voit syöttää koodin käsin alta.', 'error');
+      showScannerStatus('Kameratukea ei ole saatavilla selaimessa. Syötä koodi käsin alta.', 'error');
       return;
     }
 
@@ -814,29 +1110,25 @@ async function startCamera() {
     state.scannerStream = stream;
     el.scannerVideo.srcObject = stream;
     el.btnToggleCamera.textContent = 'Pysäytä kamera';
-    showScannerStatus('Kamera aktiivinen. Osoita viivakoodia tai QR-koodia.', 'info');
+    showScannerStatus('Kamera aktiivinen. Kohdista viivakoodi laatikkoon.', 'info');
 
-    // Start detector loop if BarcodeDetector API exists
     if ('BarcodeDetector' in window) {
-      const barcodeDetector = new window.BarcodeDetector({
-        formats: ['ean_13', 'ean_8', 'qr_code', 'code_128', 'upc_a', 'upc_e']
-      });
-
+      const detector = new window.BarcodeDetector({ formats: ['ean_13', 'ean_8', 'qr_code', 'code_128', 'upc_a'] });
       state.scannerInterval = setInterval(async () => {
         if (!state.scannerStream || el.scannerVideo.readyState < 2) return;
         try {
-          const barcodes = await barcodeDetector.detect(el.scannerVideo);
-          if (barcodes.length > 0) {
-            const code = barcodes[0].rawValue;
+          const codes = await detector.detect(el.scannerVideo);
+          if (codes.length > 0) {
+            const raw = codes[0].rawValue;
             stopCamera();
-            el.manualBarcodeInput.value = code;
-            lookupBarcode(code);
+            el.manualBarcodeInput.value = raw;
+            lookupBarcode(raw);
           }
         } catch (_) {}
       }, 500);
     }
   } catch (err) {
-    showScannerStatus('Kameran käyttöoikeutta ei myönnetty tai laitetta ei löydy. Syötä koodi käsin alle.', 'error');
+    showScannerStatus('Kameran käyttöoikeutta ei myönnetty tai kamera ei ole käytettävissä. Syötä koodi käsin alta.', 'error');
   }
 }
 
@@ -874,42 +1166,34 @@ function showScannerStatus(msg, type = 'info') {
 }
 
 /**
- * Barcode lookup: First SQLite local foods -> Then Open Food Facts API
+ * Direct Barcode lookup: Local Catalog -> Open Food Facts API
  */
 async function lookupBarcode(barcode) {
   showScannerStatus(`Haetaan koodilla ${barcode}...`, 'info');
 
-  // 1. Check local DB
+  // 1. Check local catalog
+  const foundLocal = state.foods.find(f => f.barcode === barcode);
+  if (foundLocal) {
+    showScannerStatus(`Löytyi tuotemuistista: ${foundLocal.name}`, 'success');
+    selectProductForPortion(foundLocal);
+    return;
+  }
+
+  // 2. Direct Open Food Facts API call
   try {
-    const localRes = await fetch(`/api/foods?barcode=${encodeURIComponent(barcode)}`);
-    const localData = await localRes.json();
-    if (localData.success && localData.food) {
-      showScannerStatus(`Löytyi paikallisesta tuotemuistista: ${localData.food.name}`, 'success');
-      selectProductForPortion(localData.food);
-      return;
-    }
-  } catch (_) {}
+    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`);
+    const data = await res.json();
+    if (data.status === 1 && data.product) {
+      const p = data.product;
+      const n = p.nutriments || {};
+      const name = p.product_name_fi || p.product_name || 'Tuntematon tuote';
+      const brand = p.brands || '';
+      const calories = n['energy-kcal_100g'] !== undefined ? n['energy-kcal_100g'] : (n.energy_100g ? Math.round(n.energy_100g / 4.184) : 0);
+      const protein = n.proteins_100g || 0;
+      const carbs = n.carbohydrates_100g || 0;
+      const fat = n.fat_100g || 0;
 
-  // 2. Fetch from Open Food Facts API
-  try {
-    const offUrl = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`;
-    const offRes = await fetch(offUrl);
-    const offData = await offRes.json();
-
-    if (offData.status === 1 && offData.product) {
-      const prod = offData.product;
-      const nutriments = prod.nutriments || {};
-
-      const name = prod.product_name_fi || prod.product_name || 'Tuntematon tuote';
-      const brand = prod.brands || '';
-      const calories = nutriments['energy-kcal_100g'] !== undefined
-        ? nutriments['energy-kcal_100g']
-        : (nutriments.energy_100g ? Math.round(nutriments.energy_100g / 4.184) : 0);
-      const protein = nutriments.proteins_100g || 0;
-      const carbs = nutriments.carbohydrates_100g || 0;
-      const fat = nutriments.fat_100g || 0;
-
-      const foodObj = {
+      const newFood = {
         barcode,
         name,
         brand,
@@ -920,61 +1204,46 @@ async function lookupBarcode(barcode) {
         serving_size_g: 100
       };
 
-      // Save to local product memory
-      await fetch('/api/foods', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(foodObj)
-      });
-
+      state.foods.push(newFood);
+      saveToStorage(STORAGE_KEYS.FOODS, state.foods);
       showScannerStatus(`Löytyi Open Food Factsista: ${name}`, 'success');
-      selectProductForPortion(foodObj);
+      selectProductForPortion(newFood);
       return;
     }
   } catch (err) {
-    console.error('Open Food Facts API error:', err);
+    console.warn('Open Food Facts API error:', err);
   }
 
-  // Not found
-  showScannerStatus(`Tuotetta ei löytynyt koodilla ${barcode}. Voit luoda sen käsin "Luo uusi tuote käsin" -välilehdeltä.`, 'error');
+  showScannerStatus(`Tuotetta ei löytynyt koodilla ${barcode}. Voit luoda sen käsin 'Luo uusi tuote käsin' -välilehdeltä.`, 'error');
   document.getElementById('mf-barcode').value = barcode;
 }
 
-/**
- * Text search in local product database
- */
-async function searchFoodMemory(query) {
-  try {
-    const res = await fetch(`/api/foods?q=${encodeURIComponent(query)}`);
-    const data = await res.json();
-    if (data.success) {
-      el.foodResultsList.innerHTML = '';
-      if (data.foods.length === 0) {
-        el.foodResultsList.innerHTML = `<div class="empty-meal-msg">Ei hakutuloksia tuotemuistista</div>`;
-        return;
-      }
-      data.foods.forEach(f => {
-        const item = document.createElement('div');
-        item.className = 'food-result-item';
-        item.innerHTML = `
-          <div>
-            <strong>${escapeHtml(f.name)}</strong> ${f.brand ? `<small style="color:#64748b">(${escapeHtml(f.brand)})</small>` : ''}<br>
-            <small style="color:#94a3b8">${f.calories_100g} kcal / 100g • P: ${f.protein_100g}g | H: ${f.carbs_100g}g | R: ${f.fat_100g}g</small>
-          </div>
-          <button class="btn btn-small btn-secondary">Valitse</button>
-        `;
-        item.addEventListener('click', () => selectProductForPortion(f));
-        el.foodResultsList.appendChild(item);
-      });
-    }
-  } catch (err) {
-    console.error('Search error:', err);
+function searchLocalFoodCatalog(query) {
+  el.foodResultsList.innerHTML = '';
+  const filtered = query
+    ? state.foods.filter(f => f.name.toLowerCase().includes(query.toLowerCase()) || (f.brand && f.brand.toLowerCase().includes(query.toLowerCase())))
+    : state.foods;
+
+  if (filtered.length === 0) {
+    el.foodResultsList.innerHTML = `<div class="empty-meal-msg">Ei tuotteita tuotemuistissa</div>`;
+    return;
   }
+
+  filtered.slice(0, 30).forEach(f => {
+    const item = document.createElement('div');
+    item.className = 'food-result-item';
+    item.innerHTML = `
+      <div>
+        <strong>${escapeHtml(f.name)}</strong> ${f.brand ? `<small style="color:#64748b">(${escapeHtml(f.brand)})</small>` : ''}<br>
+        <small style="color:#94a3b8">${f.calories_100g} kcal / 100g • P: ${f.protein_100g}g | H: ${f.carbs_100g}g | R: ${f.fat_100g}g</small>
+      </div>
+      <button class="btn btn-small btn-secondary">Valitse</button>
+    `;
+    item.addEventListener('click', () => selectProductForPortion(f));
+    el.foodResultsList.appendChild(item);
+  });
 }
 
-/**
- * Select a product to calculate portion
- */
 function selectProductForPortion(food) {
   state.selectedFood = food;
   el.prodName.textContent = food.name;
@@ -1005,19 +1274,16 @@ function updatePortionCalculations() {
   el.portionF.textContent = `${f} g`;
 }
 
-async function handleAddFoodToMeal() {
+function handleAddFoodToMeal() {
   if (!state.selectedFood) return;
   const portionG = parseFloat(el.mealPortionG.value) || 0;
-  if (portionG <= 0) {
-    alert('Anna kelvollinen annoskoko grammoina.');
-    return;
-  }
+  if (portionG <= 0) return alert('Anna annoskoko grammoina.');
 
   const scale = portionG / 100;
-  const mealType = el.targetMealType.value;
-  const payload = {
+  const mealItem = {
+    id: Date.now(),
     date: state.activeDate,
-    meal_type: mealType,
+    meal_type: el.targetMealType.value,
     food_name: state.selectedFood.name,
     brand: state.selectedFood.brand || '',
     barcode: state.selectedFood.barcode || '',
@@ -1028,36 +1294,24 @@ async function handleAddFoodToMeal() {
     fat: Math.round(state.selectedFood.fat_100g * scale * 10) / 10
   };
 
-  try {
-    const res = await fetch('/api/meals', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    if (data.success) {
-      closeFoodModal();
-      await loadMealsForDate(state.activeDate);
-      await loadEntries();
-    }
-  } catch (err) {
-    alert('Virhe aterian lisäyksessä: ' + err.message);
-  }
+  state.meals.push(mealItem);
+  saveToStorage(STORAGE_KEYS.MEALS, state.meals);
+  syncDayTotalsFromMeals(state.activeDate);
+  closeFoodModal();
+  refreshAllViews();
 }
 
 /**
  * =========================================================================
- * STRONG-TYYLINEN SALITREENILOGI JA LEPOTAUKOAJASTIN
+ * STRONG WORKOUT LOGGER & REST TIMER
  * =========================================================================
  */
-function setupStrongWorkoutEvents() {
-  // Start workout from template
+function bindStrongWorkoutEvents() {
   el.btnStartWorkout.addEventListener('click', () => {
     const templateName = el.workoutTemplateSelect.value || 'Oma salitreeni';
     startNewWorkoutSession(templateName);
   });
 
-  // Cancel workout
   el.btnCancelWorkout.addEventListener('click', () => {
     if (confirm('Haluatko keskeyttää treenin tallentamatta?')) {
       el.activeWorkoutCard.style.display = 'none';
@@ -1065,18 +1319,13 @@ function setupStrongWorkoutEvents() {
     }
   });
 
-  // Add exercise to active session
   el.btnAddExercise.addEventListener('click', () => {
     const name = prompt('Anna uuden liikkeen nimi (esim. Penkkipunnerrus tangolla):');
-    if (name && name.trim()) {
-      addExerciseBlockToSession(name.trim());
-    }
+    if (name && name.trim()) addExerciseBlockToSession(name.trim());
   });
 
-  // Finish and save workout
   el.btnFinishWorkout.addEventListener('click', handleFinishWorkout);
 
-  // Rest Timer controls
   document.querySelectorAll('.btn-timer-preset').forEach(btn => {
     if (btn.dataset.sec) {
       btn.addEventListener('click', () => startRestTimer(parseInt(btn.dataset.sec, 10)));
@@ -1092,20 +1341,14 @@ function setupStrongWorkoutEvents() {
 }
 
 function startNewWorkoutSession(name) {
-  state.activeWorkout = {
-    name,
-    date: state.activeDate,
-    exercises: []
-  };
-
+  state.activeWorkout = { name, date: state.activeDate };
   el.workoutSessionName.value = name;
   el.workoutSessionDate.value = state.activeDate;
   el.exercisesContainer.innerHTML = '';
   el.activeWorkoutCard.style.display = 'flex';
 
-  // Populate default exercises based on split
-  let defaultExercises = ['Penkkipunnerrus tangolla', 'Pystypunnerrus', 'Ojentajapunnerrus taljassa'];
-  if (name.includes('Pull')) defaultExercises = ['Maastaveto', 'Leuanveto', 'Hauiskääntö tangolla'];
+  let defaultExercises = ['Penkkipunnerrus tangolla', 'Pystypunnerrus tangolla', 'Ojentajapunnerrus taljassa'];
+  if (name.includes('Pull')) defaultExercises = ['Maastaveto', 'Leuanveto lisäpainolla', 'Hauiskääntö tangolla'];
   if (name.includes('Legs')) defaultExercises = ['Takakyykky tangolla', 'Jalkaprässi', 'Reiden koukistus laitteessa'];
   if (name.includes('Full Body')) defaultExercises = ['Takakyykky tangolla', 'Penkkipunnerrus tangolla', 'Leuanveto'];
 
@@ -1113,28 +1356,37 @@ function startNewWorkoutSession(name) {
   el.activeWorkoutCard.scrollIntoView({ behavior: 'smooth' });
 }
 
-async function addExerciseBlockToSession(exerciseName) {
+function getPreviousExerciseSets(exerciseName) {
+  // Query previous workouts sorted by date desc
+  for (const w of [...state.workouts].reverse()) {
+    if (w.sets && w.sets.length > 0) {
+      const matched = w.sets.filter(s => s.exercise_name === exerciseName);
+      if (matched.length > 0) {
+        return { date: w.date, sets: matched };
+      }
+    }
+  }
+  return null;
+}
+
+function addExerciseBlockToSession(exerciseName) {
   const block = document.createElement('div');
   block.className = 'exercise-block';
   block.dataset.exercise = exerciseName;
 
-  // Fetch previous performance from history
-  let prevHistoryText = 'Ei aiempaa dataa';
+  const prev = getPreviousExerciseSets(exerciseName);
+  let prevHint = 'Ei aiempaa suoritusta';
   let prevSets = [];
-  try {
-    const res = await fetch(`/api/workouts/history/${encodeURIComponent(exerciseName)}`);
-    const data = await res.json();
-    if (data.success && data.history && data.history.sets) {
-      prevSets = data.history.sets;
-      prevHistoryText = `Edellinen (${data.history.date}): ${prevSets.map(s => `${s.weight_kg}kg×${s.reps}`).join(', ')}`;
-    }
-  } catch (_) {}
+  if (prev) {
+    prevSets = prev.sets;
+    prevHint = `Edellinen (${prev.date}): ${prevSets.map(s => `${s.weight_kg}kg×${s.reps}`).join(', ')}`;
+  }
 
   block.innerHTML = `
     <div class="exercise-header">
       <div class="ex-title-wrap">
         <h4 class="ex-title">${escapeHtml(exerciseName)}</h4>
-        <span class="ex-prev-hint">${prevHistoryText}</span>
+        <span class="ex-prev-hint">${prevHint}</span>
       </div>
       <button type="button" class="btn btn-small btn-secondary btn-add-set">＋ Lisää sarja</button>
     </div>
@@ -1142,29 +1394,26 @@ async function addExerciseBlockToSession(exerciseName) {
       <thead>
         <tr>
           <th style="width: 40px;">Sarja</th>
-          <th style="width: 140px;">Edellinen</th>
+          <th>Edellinen</th>
           <th>kg</th>
           <th>Toistot</th>
           <th>RPE</th>
-          <th style="width: 60px;">Valmis</th>
+          <th style="width: 50px;">Valmis</th>
         </tr>
       </thead>
-      <tbody class="sets-tbody">
-      </tbody>
+      <tbody class="sets-tbody"></tbody>
     </table>
   `;
 
   const tbody = block.querySelector('.sets-tbody');
-
-  // Add 3 default sets with prefilled previous weights if known
   for (let i = 1; i <= 3; i++) {
-    const prev = prevSets[i - 1];
-    addSetRow(tbody, i, prev ? `${prev.weight_kg} kg × ${prev.reps}` : '-', prev ? prev.weight_kg : 60, prev ? prev.reps : 8);
+    const p = prevSets[i - 1];
+    addSetRow(tbody, i, p ? `${p.weight_kg} kg × ${p.reps}` : '-', p ? p.weight_kg : 60, p ? p.reps : 8);
   }
 
   block.querySelector('.btn-add-set').addEventListener('click', () => {
-    const currentCount = tbody.querySelectorAll('tr').length;
-    addSetRow(tbody, currentCount + 1, '-', 60, 8);
+    const curCount = tbody.querySelectorAll('tr').length;
+    addSetRow(tbody, curCount + 1, '-', 60, 8);
   });
 
   el.exercisesContainer.appendChild(block);
@@ -1178,16 +1427,13 @@ function addSetRow(tbody, setNumber, prevText, defWeight, defReps) {
     <td><input type="number" class="set-input-num set-weight" value="${defWeight}" step="0.5" min="0"></td>
     <td><input type="number" class="set-input-num set-reps" value="${defReps}" min="1"></td>
     <td><input type="number" class="set-input-rpe set-rpe" placeholder="8" min="5" max="10" step="0.5"></td>
-    <td>
-      <button type="button" class="btn-check-set" title="Kuittaa sarja tehdyksi">✓</button>
-    </td>
+    <td><button type="button" class="btn-check-set" title="Kuittaa sarja">✓</button></td>
   `;
 
   const checkBtn = tr.querySelector('.btn-check-set');
   checkBtn.addEventListener('click', () => {
     checkBtn.classList.toggle('checked');
     if (checkBtn.classList.contains('checked')) {
-      // Trigger rest timer automatically on set completion
       startRestTimer(90);
     }
   });
@@ -1197,7 +1443,6 @@ function addSetRow(tbody, setNumber, prevText, defWeight, defReps) {
 
 function startRestTimer(seconds = 90) {
   stopRestTimer();
-  state.restTimer.totalSec = seconds;
   state.restTimer.remainingSec = seconds;
   el.stickyRestTimer.style.display = 'block';
   updateRestTimerDisplay();
@@ -1205,7 +1450,6 @@ function startRestTimer(seconds = 90) {
   state.restTimer.interval = setInterval(() => {
     state.restTimer.remainingSec--;
     updateRestTimerDisplay();
-
     if (state.restTimer.remainingSec <= 0) {
       stopRestTimer();
       playAudioChime();
@@ -1228,10 +1472,9 @@ function updateRestTimerDisplay() {
   el.restTimerDisplay.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-async function handleFinishWorkout() {
+function handleFinishWorkout() {
   const name = el.workoutSessionName.value.trim() || 'Salitreeni';
   const date = el.workoutSessionDate.value || state.activeDate;
-
   const sets = [];
   const exerciseBlocks = el.exercisesContainer.querySelectorAll('.exercise-block');
 
@@ -1243,19 +1486,12 @@ async function handleFinishWorkout() {
       const reps = parseInt(tr.querySelector('.set-reps').value, 10) || 0;
       const rpe = parseFloat(tr.querySelector('.set-rpe').value) || null;
       const completed = tr.querySelector('.btn-check-set').classList.contains('checked') ? 1 : 0;
-
-      sets.push({
-        exercise_name: exName,
-        set_order: idx + 1,
-        weight_kg: weight,
-        reps,
-        rpe,
-        completed
-      });
+      sets.push({ exercise_name: exName, set_order: idx + 1, weight_kg: weight, reps, rpe, completed });
     });
   });
 
-  const payload = {
+  const session = {
+    id: Date.now(),
     date,
     name,
     notes: `${exerciseBlocks.length} liikettä, ${sets.length} sarjaa.`,
@@ -1264,51 +1500,34 @@ async function handleFinishWorkout() {
     sets
   };
 
-  try {
-    const res = await fetch('/api/workouts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    if (data.success) {
-      el.activeWorkoutCard.style.display = 'none';
-      stopRestTimer();
-      await loadPastWorkouts();
-      await loadEntries();
-      alert('Treeni tallennettu onnistuneesti!');
-    }
-  } catch (err) {
-    alert('Virhe treenin tallennuksessa: ' + err.message);
+  state.workouts.push(session);
+  saveToStorage(STORAGE_KEYS.WORKOUTS, state.workouts);
+
+  // Sync to entry if present
+  const entry = state.entries.find(e => e.date === date);
+  if (entry) {
+    entry.workout = 1;
+    entry.workout_notes = name;
+    saveToStorage(STORAGE_KEYS.ENTRIES, state.entries);
   }
+
+  el.activeWorkoutCard.style.display = 'none';
+  stopRestTimer();
+  refreshAllViews();
+  alert('Treeni tallennettu onnistuneesti!');
 }
 
-async function loadPastWorkouts() {
-  try {
-    const res = await fetch('/api/workouts');
-    const data = await res.json();
-    if (data.success) {
-      renderPastWorkouts(data.sessions || []);
-    }
-  } catch (err) {
-    console.error('Past workouts load error:', err);
-  }
-}
-
-function renderPastWorkouts(sessions) {
-  el.workoutCountLabel.textContent = `${sessions.length} treeniä`;
+function renderPastWorkouts() {
+  el.workoutCountLabel.textContent = `${state.workouts.length} treeniä`;
   el.pastWorkoutsList.innerHTML = '';
-
-  if (sessions.length === 0) {
+  if (state.workouts.length === 0) {
     el.pastWorkoutsList.innerHTML = `<div class="empty-meal-msg">Ei vielä tallennettuja treenejä. Aloita uusi treeni yläpalkista!</div>`;
     return;
   }
 
-  sessions.forEach(sess => {
+  [...state.workouts].reverse().forEach(sess => {
     const card = document.createElement('div');
     card.className = 'past-workout-card';
-
-    // Aggregate exercises and volume
     const exMap = {};
     let totalVol = 0;
     sess.sets.forEach(s => {
@@ -1318,45 +1537,36 @@ function renderPastWorkouts(sessions) {
     });
 
     const exLines = Object.keys(exMap).map(k => `<strong>${escapeHtml(k)}:</strong> ${exMap[k].join(', ')}`).join('<br>');
-
     card.innerHTML = `
       <div class="pwc-head">
         <div>
           <h4 class="pwc-title">${escapeHtml(sess.name)}</h4>
           <span class="pwc-date">${sess.date}</span>
         </div>
-        <button class="btn-del-item" onclick="window.deleteWorkoutSession(${sess.id})" title="Poista treeni">🗑️</button>
+        <button class="btn-del-item" onclick="window.deleteWorkoutSession('${sess.id}')" title="Poista treeni">🗑️</button>
       </div>
       <div class="pwc-stats">
         <span>Sarjoja: <strong>${sess.sets.length}</strong></span>
         <span>Volyymi: <strong>${Math.round(totalVol)} kg</strong></span>
         <span>Kesto: <strong>${sess.duration_min} min</strong></span>
       </div>
-      <div class="pwc-exercises-summary">
-        ${exLines}
-      </div>
+      <div class="pwc-exercises-summary">${exLines}</div>
     `;
     el.pastWorkoutsList.appendChild(card);
   });
 }
 
-window.deleteWorkoutSession = async (id) => {
-  if (confirm('Haluatko poistaa tämän treenisession?')) {
-    try {
-      const res = await fetch(`/api/workouts/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        await loadPastWorkouts();
-      }
-    } catch (err) {
-      alert('Virhe poistettaessa: ' + err.message);
-    }
+window.deleteWorkoutSession = (id) => {
+  if (confirm('Poistetaanko tämä treenisessio?')) {
+    state.workouts = state.workouts.filter(w => String(w.id) !== String(id));
+    saveToStorage(STORAGE_KEYS.WORKOUTS, state.workouts);
+    renderPastWorkouts();
   }
 };
 
 /**
  * =========================================================================
- * DASHBOARD, KAAVIOT JA HISTORIATAULUKKO
+ * DASHBOARD & CHARTS
  * =========================================================================
  */
 function updateDashboard() {
@@ -1375,9 +1585,7 @@ function updateDashboard() {
 
 function computeMovingAverages(entries) {
   for (let i = 0; i < entries.length; i++) {
-    let calSum = 0;
-    let weightSum = 0;
-    let count = 0;
+    let calSum = 0, weightSum = 0, count = 0;
     for (let j = Math.max(0, i - 6); j <= i; j++) {
       calSum += entries[j].calories;
       weightSum += entries[j].weight;
@@ -1394,7 +1602,7 @@ function updateKPIs(entries) {
   el.statCurrentTargetCals.textContent = `${targetCals} kcal`;
 
   if (entries.length === 0) {
-    el.kpiTodayDate.textContent = 'Ei dataa';
+    el.kpiTodayDate.textContent = 'Ei merkintöjä';
     el.kpiTodayCals.textContent = '-';
     el.kpiTodayDelta.textContent = '-';
     el.kpiTodayProgress.style.width = '0%';
@@ -1554,10 +1762,10 @@ function renderWeightChart(entries) {
   const tooltip = el.weightTooltip;
   svg.innerHTML = '';
   if (entries.length === 0) {
-    svg.innerHTML = `<text x="400" y="160" fill="#64748b" text-anchor="middle" font-size="14">Ei tallennettuja painomerkintöjä</text>`;
+    svg.innerHTML = `<text x="400" y="130" fill="#64748b" text-anchor="middle" font-size="14">Ei tallennettuja painomerkintöjä</text>`;
     return;
   }
-  const width = 800, height = 320, pad = { top: 30, right: 30, bottom: 40, left: 55 };
+  const width = 800, height = 260, pad = { top: 20, right: 20, bottom: 35, left: 50 };
   const plotW = width - pad.left - pad.right, plotH = height - pad.top - pad.bottom;
 
   let minW = Math.min(...entries.map(e => e.weight)), maxW = Math.max(...entries.map(e => e.weight));
@@ -1569,11 +1777,11 @@ function renderWeightChart(entries) {
   const getX = (index) => pad.left + (entries.length === 1 ? plotW / 2 : (index / (entries.length - 1)) * plotW);
   const getY = (val) => pad.top + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
 
-  for (let i = 0; i <= 5; i++) {
-    const val = yMin + (i / 5) * (yMax - yMin);
+  for (let i = 0; i <= 4; i++) {
+    const val = yMin + (i / 4) * (yMax - yMin);
     const y = getY(val);
     svg.appendChild(createSvgElement('line', { x1: pad.left, y1: y, x2: width - pad.right, y2: y, stroke: '#232f48', 'stroke-width': 1, 'stroke-dasharray': i === 0 ? 'none' : '3,3' }));
-    const label = createSvgElement('text', { x: pad.left - 10, y: y + 4, fill: '#64748b', 'font-size': 11, 'text-anchor': 'end', 'font-family': 'JetBrains Mono, monospace' });
+    const label = createSvgElement('text', { x: pad.left - 8, y: y + 4, fill: '#64748b', 'font-size': 10, 'text-anchor': 'end', 'font-family': 'JetBrains Mono, monospace' });
     label.textContent = val.toFixed(1);
     svg.appendChild(label);
   }
@@ -1586,7 +1794,7 @@ function renderWeightChart(entries) {
     }
   });
   if (maPathD) {
-    svg.appendChild(createSvgElement('path', { d: maPathD, fill: 'none', stroke: '#f59e0b', 'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+    svg.appendChild(createSvgElement('path', { d: maPathD, fill: 'none', stroke: '#f59e0b', 'stroke-width': 2.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
   }
 
   let weightPathD = '';
@@ -1598,12 +1806,12 @@ function renderWeightChart(entries) {
 
   entries.forEach((e, i) => {
     const x = getX(i), y = getY(e.weight);
-    const circle = createSvgElement('circle', { cx: x, cy: y, r: entries.length > 35 ? 3 : 4.5, fill: '#38bdf8', stroke: '#0a0e17', 'stroke-width': 2 });
+    const circle = createSvgElement('circle', { cx: x, cy: y, r: entries.length > 35 ? 2.5 : 4, fill: '#38bdf8', stroke: '#0a0e17', 'stroke-width': 1.5 });
     svg.appendChild(circle);
 
     const hitArea = createSvgElement('circle', { cx: x, cy: y, r: 12, fill: 'transparent', style: 'cursor: pointer;' });
     hitArea.addEventListener('mouseenter', () => {
-      circle.setAttribute('r', '7');
+      circle.setAttribute('r', '6');
       circle.setAttribute('fill', '#ffffff');
       tooltip.innerHTML = `<strong>${formatDateFi(e.date)}</strong><br>Paino: <strong>${e.weight.toFixed(1)} kg</strong><br>7 pv ka: <strong>${e.ma7Weight ? e.ma7Weight.toFixed(1) + ' kg' : '-'}</strong>`;
       tooltip.style.opacity = '1';
@@ -1611,15 +1819,15 @@ function renderWeightChart(entries) {
       tooltip.style.top = `${Math.max(10, y - 55)}px`;
     });
     hitArea.addEventListener('mouseleave', () => {
-      circle.setAttribute('r', entries.length > 35 ? '3' : '4.5');
+      circle.setAttribute('r', entries.length > 35 ? '2.5' : '4');
       circle.setAttribute('fill', '#38bdf8');
       tooltip.style.opacity = '0';
     });
     svg.appendChild(hitArea);
 
-    const step = Math.ceil(entries.length / 8);
+    const step = Math.ceil(entries.length / 7);
     if (i % step === 0 || i === entries.length - 1) {
-      const text = createSvgElement('text', { x, y: height - 12, fill: '#64748b', 'font-size': 10, 'text-anchor': 'middle', 'font-family': 'JetBrains Mono, monospace' });
+      const text = createSvgElement('text', { x, y: height - 10, fill: '#64748b', 'font-size': 9, 'text-anchor': 'middle', 'font-family': 'JetBrains Mono, monospace' });
       text.textContent = e.date.substring(5);
       svg.appendChild(text);
     }
@@ -1631,10 +1839,10 @@ function renderCaloriesChart(entries) {
   const tooltip = el.caloriesTooltip;
   svg.innerHTML = '';
   if (entries.length === 0) {
-    svg.innerHTML = `<text x="400" y="160" fill="#64748b" text-anchor="middle" font-size="14">Ei tallennettuja kalorimerkintöjä</text>`;
+    svg.innerHTML = `<text x="400" y="130" fill="#64748b" text-anchor="middle" font-size="14">Ei tallennettuja kalorimerkintöjä</text>`;
     return;
   }
-  const width = 800, height = 320, pad = { top: 30, right: 30, bottom: 40, left: 55 };
+  const width = 800, height = 260, pad = { top: 20, right: 20, bottom: 35, left: 50 };
   const plotW = width - pad.left - pad.right, plotH = height - pad.top - pad.bottom;
   const targetCals = state.settings.calorie_target || 2400;
 
@@ -1644,29 +1852,28 @@ function renderCaloriesChart(entries) {
   const yMax = Math.ceil((maxC + 300) / 200) * 200;
   const getY = (val) => pad.top + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
 
-  for (let i = 0; i <= 5; i++) {
-    const val = Math.round(yMin + (i / 5) * (yMax - yMin));
+  for (let i = 0; i <= 4; i++) {
+    const val = Math.round(yMin + (i / 4) * (yMax - yMin));
     const y = getY(val);
     svg.appendChild(createSvgElement('line', { x1: pad.left, y1: y, x2: width - pad.right, y2: y, stroke: '#232f48', 'stroke-width': 1, 'stroke-dasharray': i === 0 ? 'none' : '3,3' }));
-    const label = createSvgElement('text', { x: pad.left - 10, y: y + 4, fill: '#64748b', 'font-size': 11, 'text-anchor': 'end', 'font-family': 'JetBrains Mono, monospace' });
+    const label = createSvgElement('text', { x: pad.left - 8, y: y + 4, fill: '#64748b', 'font-size': 10, 'text-anchor': 'end', 'font-family': 'JetBrains Mono, monospace' });
     label.textContent = val;
     svg.appendChild(label);
   }
 
-  // Target dashed line
   const targetY = getY(targetCals);
-  svg.appendChild(createSvgElement('line', { x1: pad.left, y1: targetY, x2: width - pad.right, y2: targetY, stroke: '#ef4444', 'stroke-width': 2, 'stroke-dasharray': '5,5' }));
+  svg.appendChild(createSvgElement('line', { x1: pad.left, y1: targetY, x2: width - pad.right, y2: targetY, stroke: '#ef4444', 'stroke-width': 1.5, 'stroke-dasharray': '5,5' }));
 
   const count = entries.length;
   const barSlotW = plotW / count;
-  const barW = Math.max(4, Math.min(22, barSlotW * 0.65));
+  const barW = Math.max(3, Math.min(20, barSlotW * 0.65));
 
   entries.forEach((e, i) => {
     const barX = pad.left + i * barSlotW + (barSlotW - barW) / 2;
     const barY = getY(e.calories);
     const barHeight = Math.max(2, (pad.top + plotH) - barY);
 
-    const rect = createSvgElement('rect', { x: barX, y: barY, width: barW, height: barHeight, fill: '#3b82f6', rx: 3, opacity: 0.85 });
+    const rect = createSvgElement('rect', { x: barX, y: barY, width: barW, height: barHeight, fill: '#3b82f6', rx: 2, opacity: 0.85 });
     svg.appendChild(rect);
 
     const hitArea = createSvgElement('rect', { x: pad.left + i * barSlotW, y: pad.top, width: barSlotW, height: plotH, fill: 'transparent', style: 'cursor: pointer;' });
@@ -1677,7 +1884,7 @@ function renderCaloriesChart(entries) {
       tooltip.innerHTML = `<strong>${formatDateFi(e.date)}</strong><br>Kalorit: <strong>${e.calories} kcal</strong> (${dSign})<br>Tavoite: <strong>${targetCals} kcal</strong><br>7 pv ka: <strong>${e.ma7Calories || '-'} kcal</strong>`;
       tooltip.style.opacity = '1';
       tooltip.style.left = `${Math.min(width - 160, Math.max(10, barX - 60))}px`;
-      tooltip.style.top = `${Math.max(10, barY - 60)}px`;
+      tooltip.style.top = `${Math.max(10, barY - 55)}px`;
     });
     hitArea.addEventListener('mouseleave', () => {
       rect.setAttribute('fill', '#3b82f6');
@@ -1685,9 +1892,9 @@ function renderCaloriesChart(entries) {
     });
     svg.appendChild(hitArea);
 
-    const step = Math.ceil(entries.length / 8);
+    const step = Math.ceil(entries.length / 7);
     if (i % step === 0 || i === entries.length - 1) {
-      const text = createSvgElement('text', { x: pad.left + i * barSlotW + barSlotW / 2, y: height - 12, fill: '#64748b', 'font-size': 10, 'text-anchor': 'middle', 'font-family': 'JetBrains Mono, monospace' });
+      const text = createSvgElement('text', { x: pad.left + i * barSlotW + barSlotW / 2, y: height - 10, fill: '#64748b', 'font-size': 9, 'text-anchor': 'middle', 'font-family': 'JetBrains Mono, monospace' });
       text.textContent = e.date.substring(5);
       svg.appendChild(text);
     }
@@ -1701,7 +1908,7 @@ function renderCaloriesChart(entries) {
     }
   });
   if (calMaPathD) {
-    svg.appendChild(createSvgElement('path', { d: calMaPathD, fill: 'none', stroke: '#10b981', 'stroke-width': 2.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+    svg.appendChild(createSvgElement('path', { d: calMaPathD, fill: 'none', stroke: '#10b981', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
   }
 }
 
@@ -1709,7 +1916,7 @@ function renderTable(entries) {
   const tbody = el.entriesTbody;
   tbody.innerHTML = '';
   if (entries.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #64748b; padding: 32px;">Ei merkintöjä.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: #64748b; padding: 28px;">Ei merkintöjä. Aloita lisäämällä merkintä tai kokeile esimerkkidataa!</td></tr>`;
     return;
   }
 
@@ -1734,8 +1941,8 @@ function renderTable(entries) {
       <td>${recoveryContent}</td>
       <td>
         <div class="action-btns">
-          <button class="btn-icon-action" onclick="window.editDayEntry(${e.id})" title="Muokkaa">✏️</button>
-          <button class="btn-icon-action del" onclick="window.deleteDayEntry(${e.id})" title="Poista">🗑️</button>
+          <button class="btn-icon-action" onclick="window.editDayEntry('${e.id}')" title="Muokkaa">✏️</button>
+          <button class="btn-icon-action del" onclick="window.deleteDayEntry('${e.id}')" title="Poista">🗑️</button>
         </div>
       </td>
     `;
@@ -1743,109 +1950,29 @@ function renderTable(entries) {
   });
 }
 
-function openDayModal(id = null) {
-  if (id) {
-    el.modalTitle.textContent = 'Muokkaa päiväkirjamerkintää';
-    const entry = state.entries.find(e => e.id === id);
-    if (entry) {
-      el.entryId.value = entry.id;
-      el.formDate.value = entry.date;
-      el.formWeight.value = entry.weight;
-      el.formCalories.value = entry.calories;
-      el.formProtein.value = entry.protein !== null ? entry.protein : '';
-      el.formCarbs.value = entry.carbs !== null ? entry.carbs : '';
-      el.formFat.value = entry.fat !== null ? entry.fat : '';
-      el.formWorkout.checked = !!entry.workout;
-      el.workoutDetailsWrap.style.display = entry.workout ? 'flex' : 'none';
-      el.formWorkoutNotes.value = entry.workout_notes || '';
-      setRatingActive(el.workoutMoodStars, el.formWorkoutMood, entry.workout_mood);
-      setRatingActive(el.recoveryStars, el.formRecovery, entry.recovery);
-
-      const rec = calculateRecommendedMacros(entry.weight, entry.calories);
-      el.previewP.textContent = rec.protein;
-      el.previewF.textContent = rec.fat;
-      el.previewC.textContent = rec.carbs;
-    }
-  } else {
-    el.modalTitle.textContent = 'Uusi päiväkirjamerkintä';
-    el.entryForm.reset();
-    el.entryId.value = '';
-    el.formDate.value = state.activeDate;
-    el.formCalories.value = state.settings.calorie_target || 2400;
-
-    if (state.entries.length > 0) {
-      const latest = state.entries[state.entries.length - 1];
-      el.formWeight.value = latest.weight;
-      const rec = calculateRecommendedMacros(latest.weight, state.settings.calorie_target);
-      el.previewP.textContent = rec.protein;
-      el.previewF.textContent = rec.fat;
-      el.previewC.textContent = rec.carbs;
-    }
-    el.workoutDetailsWrap.style.display = 'none';
-    setRatingActive(el.workoutMoodStars, el.formWorkoutMood, null);
-    setRatingActive(el.recoveryStars, el.formRecovery, null);
-  }
-  el.entryModal.classList.add('open');
-}
-
-function closeDayModal() {
-  el.entryModal.classList.remove('open');
-}
-
-async function handleDayFormSubmit(e) {
-  e.preventDefault();
-  const id = el.entryId.value;
-  const payload = {
-    date: el.formDate.value,
-    weight: parseFloat(el.formWeight.value),
-    calories: parseInt(el.formCalories.value, 10),
-    protein: el.formProtein.value !== '' ? parseFloat(el.formProtein.value) : null,
-    carbs: el.formCarbs.value !== '' ? parseFloat(el.formCarbs.value) : null,
-    fat: el.formFat.value !== '' ? parseFloat(el.formFat.value) : null,
-    workout: el.formWorkout.checked ? 1 : 0,
-    workout_notes: el.formWorkoutNotes.value,
-    workout_mood: el.formWorkoutMood.value ? parseInt(el.formWorkoutMood.value, 10) : null,
-    recovery: el.formRecovery.value ? parseInt(el.formRecovery.value, 10) : null
-  };
-
-  try {
-    const url = id ? `/api/entries/${id}` : '/api/entries';
-    const method = id ? 'PUT' : 'POST';
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    if (data.success) {
-      closeDayModal();
-      await loadEntries();
+function setupRatingButtons(container, hiddenInput) {
+  container.addEventListener('click', (e) => {
+    const btn = e.target.closest('.rating-btn');
+    if (!btn) return;
+    const val = btn.dataset.val;
+    if (hiddenInput.value === val) {
+      hiddenInput.value = '';
+      btn.classList.remove('active');
     } else {
-      alert('Virhe tallennuksessa: ' + data.error);
+      hiddenInput.value = val;
+      container.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
     }
-  } catch (err) {
-    alert('Verkkovirhe: ' + err.message);
-  }
+  });
 }
 
-window.editDayEntry = (id) => openDayModal(id);
-window.deleteDayEntry = async (id) => {
-  if (confirm('Poistetaanko tämä merkintä?')) {
-    try {
-      const res = await fetch(`/api/entries/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        await loadEntries();
-      }
-    } catch (err) {
-      alert('Virhe poistettaessa: ' + err.message);
-    }
-  }
-};
+function setRatingActive(container, hiddenInput, value) {
+  hiddenInput.value = value || '';
+  container.querySelectorAll('.rating-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.val === String(value));
+  });
+}
 
-/**
- * Utility Helpers
- */
 function createSvgElement(tag, attrs) {
   const elem = document.createElementNS('http://www.w3.org/2000/svg', tag);
   for (const [k, v] of Object.entries(attrs)) elem.setAttribute(k, v);
@@ -1875,5 +2002,5 @@ function debounce(func, wait) {
   };
 }
 
-// Start application
+// Start PWA
 document.addEventListener('DOMContentLoaded', init);

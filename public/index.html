@@ -2,9 +2,21 @@
 <html lang="fi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kalori- ja Makrovahti | Lifesum & Strong -hybridi</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Kalori- ja Makrovahti | PWA Fitness & Nutrition</title>
+
+  <!-- PWA & Mobile Meta Tags -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#0a0e17">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Makrovahti">
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="./styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -17,28 +29,15 @@
         <div class="brand-icon">⚡</div>
         <div>
           <h1>Kalori- ja Makrovahti</h1>
-          <p class="subtitle">Lifesum-ravintoseuranta, viivakoodiskanneri & Strong-salitreenilogi</p>
+          <p class="subtitle">Yksityinen Lifesum- & Strong -fitnesssovellus • PWA</p>
         </div>
       </div>
       <div class="header-actions">
-        <button id="btn-generate-data" class="btn btn-secondary" title="Generoi 30 päivää realistista testidataa">
-          <span class="icon">🎲</span> Generoi testidataa (30 pv)
+        <button id="btn-open-settings" class="btn btn-secondary" title="Asetukset ja datanhallinta">
+          <span class="icon">⚙️</span> Asetukset
         </button>
-        <div class="dropdown">
-          <button id="btn-export" class="btn btn-secondary">
-            <span class="icon">📥</span> Vienti / Tuonti ▾
-          </button>
-          <div class="dropdown-menu" id="export-menu">
-            <a href="/api/export?format=json" download="kalorivahti_koko_data.json">Vie JSON (koko kanta)</a>
-            <a href="/api/export?format=csv" download="kalorivahti_vienti.csv">Vie CSV (päivätilasto)</a>
-            <label class="dropdown-file-label">
-              Tuo JSON-tiedosto
-              <input type="file" id="import-file-input" accept=".json" style="display: none;">
-            </label>
-          </div>
-        </div>
         <button id="btn-open-modal" class="btn btn-primary">
-          <span class="icon">＋</span> Uusi päiväkirjamerkintä
+          <span class="icon">＋</span> Päiväkirjamerkintä
         </button>
       </div>
     </header>
@@ -46,21 +45,36 @@
     <!-- Main Navigation Tabs -->
     <nav class="nav-tabs" id="main-nav-tabs">
       <button class="nav-tab active" data-tab="tab-dashboard">
-        <span class="tab-icon">📊</span> Dashboard & Makrot
+        <span class="tab-icon">📊</span> <span class="tab-label">Dashboard</span>
       </button>
       <button class="nav-tab" data-tab="tab-meals">
-        <span class="tab-icon">🥗</span> Ateriat & Skanneri (Lifesum)
+        <span class="tab-icon">🥗</span> <span class="tab-label">Ateriat (Lifesum)</span>
       </button>
       <button class="nav-tab" data-tab="tab-workout">
-        <span class="tab-icon">🏋️</span> Salitreeni & Ajastin (Strong)
+        <span class="tab-icon">🏋️</span> <span class="tab-label">Treeni (Strong)</span>
       </button>
       <button class="nav-tab" data-tab="tab-history">
-        <span class="tab-icon">📋</span> Päivähistoria
+        <span class="tab-icon">📋</span> <span class="tab-label">Historia</span>
       </button>
     </nav>
 
     <!-- TAB 1: DASHBOARD -->
     <main id="tab-dashboard" class="tab-content active">
+      <!-- Welcome / Zero State Banner (shown when fresh) -->
+      <section class="welcome-banner" id="welcome-banner" style="display: none;">
+        <div class="welcome-content">
+          <span class="welcome-icon">👋</span>
+          <div>
+            <h3>Tervetuloa Kalori- ja Makrovahtiin!</h3>
+            <p>Tiedot tallentuvat vain tähän selaimeesi (100% yksityinen). Voit aloittaa lisäämällä ensimmäisen aamupainosi tai kokeilla toimintoja demodatalla.</p>
+          </div>
+        </div>
+        <div class="welcome-actions">
+          <button class="btn btn-primary btn-small" id="btn-welcome-add">＋ Lisää merkintä</button>
+          <button class="btn btn-secondary btn-small" id="btn-welcome-demo">🎲 Lataa esimerkkidata</button>
+        </div>
+      </section>
+
       <!-- Top KPI Grid -->
       <section class="kpi-grid">
         <div class="kpi-card">
@@ -195,14 +209,14 @@
         <div class="section-title-row">
           <div>
             <h2>Päivän Makrotavoitteet vs. Toteuma</h2>
-            <p class="section-desc">
-              Proteiini = 2,0 g × paino | Rasva = 0,8 g × paino | Hiilihydraatit = loput kalorit (jaettuna 4 kcal/g)
+            <p class="section-desc" id="macro-formula-desc">
+              Proteiini = 2,0 g × paino | Rasva = 0,8 g × paino | Hiilarit = loput kalorit (4 kcal/g)
             </p>
           </div>
           <div class="macro-target-settings">
-            <label>Aktiivinen kaloritavoite:</label>
+            <label>Kaloritavoite:</label>
             <div class="target-input-wrap">
-              <input type="number" id="global-calorie-target" value="2400" min="1200" max="6000" step="1">
+              <input type="number" id="global-calorie-target" value="2400" min="1000" max="8000" step="1">
               <button id="btn-save-target" class="btn btn-small btn-secondary">Päivitä</button>
             </div>
           </div>
@@ -213,7 +227,7 @@
           <div class="macro-card protein-card">
             <div class="macro-card-header">
               <span class="macro-tag protein-tag">Proteiini</span>
-              <span class="macro-formula">2,0 g / kg • 4 kcal/g</span>
+              <span class="macro-formula" id="formula-p-tag">2,0 g / kg • 4 kcal/g</span>
             </div>
             <div class="macro-comparison">
               <div class="macro-col">
@@ -249,7 +263,7 @@
           <div class="macro-card fat-card">
             <div class="macro-card-header">
               <span class="macro-tag fat-tag">Rasva</span>
-              <span class="macro-formula">0,8 g / kg • 9 kcal/g</span>
+              <span class="macro-formula" id="formula-f-tag">0,8 g / kg • 9 kcal/g</span>
             </div>
             <div class="macro-comparison">
               <div class="macro-col">
@@ -362,17 +376,17 @@
     <main id="tab-meals" class="tab-content">
       <div class="meals-header-bar">
         <div class="date-selector-row">
-          <button class="btn btn-secondary btn-small" id="btn-prev-day">◀ Edellinen</button>
+          <button class="btn btn-secondary btn-small" id="btn-prev-day">◀</button>
           <input type="date" id="meals-active-date" class="date-input">
-          <button class="btn btn-secondary btn-small" id="btn-next-day">Seuraava ▶</button>
+          <button class="btn btn-secondary btn-small" id="btn-next-day">▶</button>
           <button class="btn btn-secondary btn-small" id="btn-today">Tänään</button>
         </div>
         <div class="meals-actions">
           <button class="btn btn-primary" id="btn-open-scanner">
-            <span class="icon">📷</span> Skannaa viivakoodi / EAN
+            <span class="icon">📷</span> Skannaa koodi
           </button>
           <button class="btn btn-secondary" id="btn-quick-add-food">
-            <span class="icon">🔍</span> Etsi tai lisää tuote
+            <span class="icon">🔍</span> Tuotehaku
           </button>
         </div>
       </div>
@@ -429,7 +443,6 @@
 
       <!-- Meal Categories -->
       <section class="meals-list-grid">
-        <!-- Aamiainen -->
         <div class="meal-group-card" data-meal="breakfast">
           <div class="meal-group-header">
             <div class="meal-title-wrap">
@@ -446,7 +459,6 @@
           </div>
         </div>
 
-        <!-- Lounas -->
         <div class="meal-group-card" data-meal="lunch">
           <div class="meal-group-header">
             <div class="meal-title-wrap">
@@ -463,7 +475,6 @@
           </div>
         </div>
 
-        <!-- Päivällinen -->
         <div class="meal-group-card" data-meal="dinner">
           <div class="meal-group-header">
             <div class="meal-title-wrap">
@@ -480,7 +491,6 @@
           </div>
         </div>
 
-        <!-- Välipalat -->
         <div class="meal-group-card" data-meal="snack">
           <div class="meal-group-header">
             <div class="meal-title-wrap">
@@ -592,9 +602,6 @@
           </div>
           <div class="table-actions">
             <span class="entry-count-pill" id="entry-count-label">0 merkintää</span>
-            <button id="btn-reset-data" class="btn btn-small btn-danger" title="Tyhjennä kaikki merkinnät">
-              Tyhjennä data
-            </button>
           </div>
         </div>
 
@@ -666,15 +673,15 @@
           </div>
           <div class="macro-preview-badges">
             <div class="preview-badge badge-p">
-              <span>Proteiini (2 g/kg):</span>
+              <span>Proteiini:</span>
               <strong id="preview-p">-</strong> g
             </div>
             <div class="preview-badge badge-f">
-              <span>Rasva (0,8 g/kg):</span>
+              <span>Rasva:</span>
               <strong id="preview-f">-</strong> g
             </div>
             <div class="preview-badge badge-c">
-              <span>Hiilarit (jäljelle jäävä):</span>
+              <span>Hiilarit:</span>
               <strong id="preview-c">-</strong> g
             </div>
           </div>
@@ -914,6 +921,71 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <!-- MODAL 3: Settings & Data Management Drawer / Modal -->
+  <div class="modal-backdrop" id="settings-modal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Asetukset & Yksityisyys</h3>
+        <button type="button" class="btn-close" id="btn-close-settings">✕</button>
+      </div>
+
+      <div class="modal-body-scroll">
+        <div class="form-fieldset">
+          <legend>Henkilökohtaiset oletustavoitteet</legend>
+          <div class="form-group">
+            <label for="setting-cal-target">Oletuskaloritavoite (kcal/pv)</label>
+            <input type="number" id="setting-cal-target" min="1000" max="8000" step="10" value="2400">
+          </div>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label for="setting-protein-factor">Proteiini (g / painokilo)</label>
+              <input type="number" id="setting-protein-factor" min="0.5" max="4.0" step="0.1" value="2.0">
+            </div>
+            <div class="form-group">
+              <label for="setting-fat-factor">Rasva (g / painokilo)</label>
+              <input type="number" id="setting-fat-factor" min="0.3" max="2.0" step="0.05" value="0.8">
+            </div>
+          </div>
+          <p class="field-hint">Hiilihydraatit lasketaan automaattisesti jäljelle jäävistä kaloreista (4 kcal/g).</p>
+        </div>
+
+        <div class="form-fieldset">
+          <legend>Datanhallinta & Yksityisyys</legend>
+          <p style="font-size: 13px; color: var(--text-secondary);">
+            🔒 Kaikki tietosi tallentuvat vain tähän laitteeseen ja selaimeen (<strong style="color:var(--color-primary)">localStorage</strong>). Kukaan muu ei näe tietojasi, ja voit jakaa sovelluksen kavereillesi turvallisesti.
+          </p>
+
+          <div class="settings-btn-grid">
+            <button type="button" class="btn btn-secondary" id="btn-export-json">
+              📥 Vie varmuuskopio (JSON)
+            </button>
+            <button type="button" class="btn btn-secondary" id="btn-export-csv">
+              📊 Vie CSV (Excel)
+            </button>
+            <label class="btn btn-secondary" style="cursor: pointer;">
+              📤 Tuo varmuuskopio (JSON)
+              <input type="file" id="settings-import-file" accept=".json" style="display: none;">
+            </label>
+            <button type="button" class="btn btn-secondary" id="btn-load-demo-data">
+              🎲 Lataa esimerkkidata (demo)
+            </button>
+          </div>
+
+          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border-color);">
+            <button type="button" class="btn btn-danger btn-block" id="btn-clear-all-data">
+              🗑️ Tyhjennä kaikki tiedot (Puhdas pöytä)
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary btn-block" id="btn-save-settings">Tallenna asetukset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main JavaScript with 100% Client-Side Local Storage & PWA Support -->
+  <script src="./app.js"></script>
 </body>
 </html>

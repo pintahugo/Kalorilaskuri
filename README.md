@@ -1,88 +1,70 @@
-# ⚡ Kalori- ja Makrovahti
+# ⚡ Kalori- ja Makrovahti (Lifesum & Strong -hybridi)
 
-Henkilökohtainen web-sovellus kalorien (oletustavoite 2400 kcal/pv), aamupainon, makrojen, treenipäivien ja palautumisen seurantaan.
+Henkilökohtainen web-sovellus, joka yhdistää:
+1. **Lifesum-tyylisen kalori- ja makroseurannan** (oletustavoite 2400 kcal/pv, makrotavoitteet proteiini 2 g × paino, rasva 0,8 g × paino, loput hiilihydraatteihin, aamupaino, 7 pv liukuva keskiarvo ja TDEE-arviointi).
+2. **Kameralla toimivan viivakoodi- ja QR-skannerin** sekä **Open Food Facts** -ravintosisältöhaun annoskokolaskurilla ja paikallisella tuotemuistilla.
+3. **Strong-tyylisen salitreenilogin** treenipohjilla (Push/Pull/Legs/Full Body), sarjakirjauksella (paino, toistot, RPE), edellisen treenin vertailulla ja älykkäällä lepotaukoajastimella (äänimerkillä).
 
 ---
 
 ## 🚀 Keskeiset ominaisuudet
 
-1. **Reaaliaikaiset makrotavoitteet**:
-   - **Proteiini**: Laskeutuu automaattisesti kaavalla $2{,}0\text{ g} \times \text{aamupaino (kg)}$ ($4\text{ kcal/g}$).
-   - **Rasva**: Laskeutuu automaattisesti kaavalla $0{,}8\text{ g} \times \text{aamupaino (kg)}$ ($9\text{ kcal/g}$).
-   - **Hiilihydraatit**: Laskeutuu jäljelle jäävistä kaloreista: $(\text{kaloritavoite} - \text{proteiinikalorit} - \text{rasvakalorit}) / 4$ (pyöristettynä, minimi 0 g).
-   - Lomakkeessa esikatselu päivittyy välittömästi aamupainoa syötettäessä.
-   - **1-klikkauksen esitäyttö**: "Täytä nämä toteutuneiksi" kopioi lasketut tavoitteet toteutuneisiin makroihin.
-   - Visuaalinen vertailu toteutuneiden ja tavoitemakrojen välillä mittaripalkeilla ja grammaeroilla.
+### 1. Lifesum-ravintoseuranta & Makrolaskenta
+- **Automaattiset makrotavoitteet**:
+  - Proteiini: $2{,}0\text{ g} \times \text{paino}$ ($4\text{ kcal/g}$)
+  - Rasva: $0{,}8\text{ g} \times \text{paino}$ ($9\text{ kcal/g}$)
+  - Hiilihydraatit: $\max(0, \text{round}((\text{kalorit} - \text{proteiinikalorit} - \text{rasvakalorit}) / 4))$
+- **Aterialoki**: Aamiainen, Lounas, Päivällinen ja Välipalat.
+- **Dynaamiset edistymisrenkaat & mittarit**: Jäljellä olevat kalorit ja makrot grammoina reaaliajassa.
+- **TDEE & Älykäs Tavoitetila**: Laskee todellisen energiankulutuksen ($7700\text{ kcal} / 1\text{ kg}$) ja antaa suosituksen painonpudotukseen (-400 kcal/pv), lihaskasvuun (+250 kcal/pv) tai ylläpitoon.
 
-2. **Datan paikallinen tallennus & vienti**:
-   - Tallennus paikalliseen SQLite-tietokantaan (`data/fitness.db`).
-   - Yhden klikkauksen **"Generoi testidataa (30 pv)"** -painike tuottaa realistisen ja koherentin 30 päivän aineiston (aamupaino, kalorit, makrot, salitreenit ja palautuminen).
-   - Vienti JSON- ja CSV-muodoissa (Excel-yhteensopiva puolipiste-erottimella ja UTF-8 BOM -merkinnällä).
+### 2. Viivakoodi- & QR-skanneri + Open Food Facts
+- **Kameraskanneri**: Lukee EAN-13, EAN-8 ja QR-koodeja kameran kuvaikkunalla ja kohdistusristikolla.
+- **Käsisyöttö & Pikanäytteet**: Mahdollisuus syöttää koodi numerona tai valita suoraan testituote (Valio Raejuusto, Maitorahka, Elovena Kaurahiutale, Kanafilee, Lohifilee).
+- **Open Food Facts -haku**: Hakee tuotteen nimen, brändin ja ravintoarvot (energia, P, H, R per 100 g) virheenkäsittelyllä.
+- **Annoskokolaskuri**: Syötä annos grammoina -> laskee makrot suoraan ateriaan.
+- **Paikallinen Tuotemuisti (SQLite `foods`)**: Kaikki haetut ja käsin lisätyt tuotteet tallentuvat paikalliseen tietokantaan nopeaa hakua ja uudelleenkäyttöä varten.
 
-3. **Dashboard & Analytiikka**:
-   - **Päivän ja 7 päivän liukuva kalorikeskiarvo** suhteessa kaloritavoitteeseen (oletus 2400 kcal).
-   - **Aamupaino ja 7 päivän liukuva painokeskiarvo** (tasoittaa nesteheilahtelut).
-   - **Arvioitu toteutunut kulutus (TDEE)**: Lasketaan painon liukuvasta trendistä ja todellisesta energiansaannista kehon massamuutoksen ($7700\text{ kcal} / 1\text{ kg}$) avulla.
-   - **Interaktiiviset SVG-kaaviot**:
-     - Painon mittauspisteet ja 7 pv liukuva keskiarvokäyrä hover-työkaluohjeilla.
-     - Päivittäiset kaloripylväät, tavoiteviiva sekä 7 pv kalorikeskiarvokäyrä.
+### 3. Strong-salitreenilogi & Lepotaukoajastin
+- **Treenipohjat / Viikkojako**: Valmiit pohjat (Push, Pull, Legs, Full Body) tai vapaa treeni.
+- **Sarjakirjaus**: Liikekohtaiset sarjat, paino (kg), toistot, valinnainen RPE (6–10) ja kuittaus.
+- **Edellisen treenin vertailu**: Näyttää suoraan saman liikkeen edelliskerran sarjat (esim. *"Edellinen: 80 kg × 8"*).
+- **Automaattinen Lepotaukoajastin**:
+  - Käynnistyy automaattisesti sarjan kuittaamisen yhteydessä.
+  - Pikanapit: 60s, 90s, 120s, 180s sekä +30s lisäaika.
+  - Web Audio API -syntetisoitu äänimerkki ajan päättyessä.
+- **Volyymi & Historia**: Tallentaa treenikohtaisen volyymin ($\sum \text{paino} \times \text{toistot}$) ja keston.
 
-4. **Tavoitetilat & Älykäs Kalorisuositus**:
-   - *Painon pudotus* (-400 kcal/pv vaje TDEE:hen nähden, ~0,35–0,4 kg/vko tahti).
-   - *Ylläpito / Recomposition* (Tasauspiste TDEE:n mukaan).
-   - *Lihaskasvu (maltillinen plussa)* (+250 kcal/pv maltillinen anabolinen ylijäämä).
-   - Analytiikkakortti antaa perustellun selityksen ja painikkeen *"Ota suositus käyttöön"*, joka päivittää kaloritavoitteen ja samalla automaattisesti hiilihydraattitavoitteen.
-
-5. **Päiväkirjamerkintöjen CRUD**:
-   - Päivämäärä, aamupaino, kalorit, toteutuneet makrot.
-   - Salitreeni (kyllä/ei, sanallinen muistiinpano/ohjelma, fiilis 1–5).
-   - Uni ja palautuminen (arvosana 1–5).
-   - Täysi muokkaus ja poisto taulukosta.
+### 4. Datanhallinta & Paikallisuus
+- Paikallinen SQLite-tietokanta (`data/fitness.db`).
+- Vienti JSON- ja CSV-muodoissa sekä JSON-tuonti.
+- *"Generoi testidataa (30 pv)"* -painike generoi 30 päivää realistisia aamupainoja, aterioita ja treenejä.
 
 ---
 
-## 🛠️ Teknologia
+## 🛠️ Teknologia ja arkkitehtuuri
 
-- **Backend**: Natiivi Node.js HTTP-palvelin (`node:http`) ja SQLite-ajuri (`node:sqlite`). Ei vaadi ulkoisia `npm install` -kirjastoja.
-- **Frontend**: Moderni HTML5, CSS3 (tumma teema, lasimorfismi, mobiiliresponsiivisuus) ja puhdas Vanilla JS.
-- **Kaaviot**: Responsiivinen, kevyt SVG-grafiikkamoottori interaktiivisilla hover-työkaluohjeilla.
-- **Tietokanta**: Paikallinen SQLite (`data/fitness.db`).
+- **Backend**: Node.js (v22+ / v26) sisäänrakennetulla `node:http`- ja `node:sqlite`-moduulilla (ei ulkoisia npm-riippuvuuksia).
+- **Frontend**: Responsiivinen HTML5, CSS3 (tumma teema) ja Vanilla JS.
+- **API-integraatio**: Open Food Facts v2 REST API.
+- **Äänet**: Web Audio API (syntetisoitu äänikello ajastimelle).
 
 ---
 
-## 📦 Asennus ja käynnistys
-
-### Vaatimukset
-- Node.js v22 tai uudempi (v26 testattu)
-
-### Käynnistys
+## 📦 Käynnistysohjeet
 
 ```bash
 # Siirry projektikansioon
 cd /Users/hugo/.gemini/antigravity/scratch/kalorilaskuri
 
-# Käynnistä sovellus
+# Käynnistä palvelin
 node server.js
 # tai
 npm start
 ```
 
-Avaa selain osoitteessa:
+Avaa selain:
 👉 **[http://localhost:3000](http://localhost:3000)**
-
----
-
-## 📐 Kaavat ja laskentalogiikka
-
-### 1. Makrotavoitteet
-$$\text{Proteiinitavoite (g)} = \text{round}(2{,}0 \times \text{paino})$$
-$$\text{Rasvatavoite (g)} = \text{round}(0{,}8 \times \text{paino})$$
-$$\text{Hiilihydraattitavoite (g)} = \max\left(0, \text{round}\left(\frac{\text{Kaloritavoite} - (\text{Proteiini} \times 4) - (\text{Rasva} \times 9)}{4}\right)\right)$$
-
-### 2. TDEE (Kokonaisenergiankulutus)
-Kun merkintöjä on vähintään 7 päivää, lasketaan painon lineaarinen muutosnopeus $m$ (kg/pv) ja keskimääräiset toteutuneet kalorit $\bar{C}$:
-$$\text{Toteutunut energiatase (kcal/pv)} = m \times 7700\text{ kcal}$$
-$$\text{Arvioitu TDEE} = \text{round}(\bar{C} - (m \times 7700))$$
 
 ---
 
@@ -91,13 +73,13 @@ $$\text{Arvioitu TDEE} = \text{round}(\bar{C} - (m \times 7700))$$
 ```
 kalorilaskuri/
 ├── data/
-│   └── fitness.db       # Paikallinen SQLite-tietokanta (luodaan automaattisesti)
+│   └── fitness.db       # SQLite-tietokanta (entries, meal_items, foods, workouts)
 ├── public/
-│   ├── app.js           # Frontend-logiikka, makrolaskuri, SVG-kaaviomoottori
-│   ├── index.html       # Käyttöliittymä
-│   └── styles.css       # Tumma teema ja responsiivinen asettelu
-├── .gitignore           # GitHub-yhteensopiva ohitustiedosto
+│   ├── app.js           # Lifesum-makrot, skanneri, Strong-loki ja ajastin
+│   ├── index.html       # Käyttöliittymä ja välilehtinavigaatio
+│   └── styles.css       # Teema, asettelu ja animaatiot
+├── .gitignore           # Gitin ohitussäännöt
 ├── package.json         # Pakettikonfiguraatio
-├── README.md            # Dokumentaatio ja ohjeet
-└── server.js            # Node.js REST API & SQLite DAO
+├── README.md            # Dokumentaatio
+└── server.js            # REST API & SQLite DAO
 ```

@@ -12,7 +12,9 @@ const STORAGE_KEYS = {
   WORKOUTS: 'makrovahti_workouts',
   FOODS: 'makrovahti_foods',
   CUSTOM_TEMPLATES: 'makrovahti_custom_templates',
-  CUSTOM_EXERCISES: 'makrovahti_custom_exercises'
+  CUSTOM_EXERCISES: 'makrovahti_custom_exercises',
+  WORKOUT_DRAFT: 'makrovahti_workout_draft',
+  COACH_CHAT: 'makrovahti_coach_chat'
 };
 
 // Curated Gym Exercise Library categorized by muscle group
@@ -298,6 +300,7 @@ const el = {
   btnFinishWorkout: document.getElementById('btn-finish-workout'),
   pastWorkoutsList: document.getElementById('past-workouts-list'),
   workoutCountLabel: document.getElementById('workout-count-label'),
+  latestWorkoutSpotlight: document.getElementById('latest-workout-spotlight'),
 
   // Exercise Picker Modal
   exercisePickerModal: document.getElementById('exercise-picker-modal'),
@@ -306,7 +309,14 @@ const el = {
   exerciseCatPills: document.getElementById('exercise-cat-pills'),
   exercisePickerList: document.getElementById('exercise-picker-list'),
   customExerciseInput: document.getElementById('custom-exercise-input'),
-  btnCreateCustomExercise: document.getElementById('btn-create-custom-exercise')
+  btnCreateCustomExercise: document.getElementById('btn-create-custom-exercise'),
+
+  // Coach Bot Elements
+  coachChatMessages: document.getElementById('coach-chat-messages'),
+  coachChatForm: document.getElementById('coach-chat-form'),
+  coachUserInput: document.getElementById('coach-user-input'),
+  btnClearCoachChat: document.getElementById('btn-clear-coach-chat'),
+  techniqueCardsGrid: document.getElementById('technique-cards-grid')
 };
 
 /**
@@ -567,6 +577,8 @@ function init() {
   bindBarcodeScannerEvents();
   bindStrongWorkoutEvents();
   populateCustomTemplatesDropdown();
+  restoreActiveWorkoutDraft();
+  initCoachBot();
 
   el.mealsActiveDate.value = state.activeDate;
   el.workoutSessionDate.value = state.activeDate;
@@ -623,6 +635,7 @@ function bindNavigationTabs() {
     if (tabId === 'tab-meals') renderMealsForActiveDate();
     if (tabId === 'tab-workout') renderPastWorkouts();
     if (tabId === 'tab-dashboard') updateDashboard();
+    if (tabId === 'tab-coach') renderCoachTab();
   });
 
   // Welcome banner buttons
@@ -1410,10 +1423,18 @@ function bindStrongWorkoutEvents() {
     startNewWorkoutSession(templateName, exercises);
   });
 
+  if (el.workoutSessionName) {
+    el.workoutSessionName.addEventListener('input', saveActiveWorkoutDraft);
+  }
+  if (el.workoutSessionDate) {
+    el.workoutSessionDate.addEventListener('change', saveActiveWorkoutDraft);
+  }
+
   el.btnCancelWorkout.addEventListener('click', () => {
     if (confirm('Haluatko keskeyttää treenin tallentamatta?')) {
       el.activeWorkoutCard.style.display = 'none';
       state.activeWorkout = null;
+      localStorage.removeItem(STORAGE_KEYS.WORKOUT_DRAFT);
     }
   });
 
@@ -1508,7 +1529,72 @@ function startNewWorkoutSession(name, exercises = []) {
     exercises.forEach(exName => addExerciseBlockToSession(exName));
   }
 
+  saveActiveWorkoutDraft();
   el.activeWorkoutCard.scrollIntoView({ behavior: 'smooth' });
+}
+
+function saveActiveWorkoutDraft() {
+  if (!state.activeWorkout || el.activeWorkoutCard.style.display === 'none') {
+    localStorage.removeItem(STORAGE_KEYS.WORKOUT_DRAFT);
+    return;
+  }
+  const blocks = el.exercisesContainer.querySelectorAll('.exercise-block');
+  const exercisesData = [];
+  blocks.forEach(b => {
+    const exName = b.dataset.exercise;
+    const sets = [];
+    b.querySelectorAll('.sets-tbody tr').forEach(tr => {
+      sets.push({
+        weight: tr.querySelector('.set-weight').value,
+        reps: tr.querySelector('.set-reps').value,
+        rpe: tr.querySelector('.set-rpe').value,
+        checked: tr.querySelector('.btn-check-set').classList.contains('checked')
+      });
+    });
+    exercisesData.push({ name: exName, sets });
+  });
+
+  const draft = {
+    name: el.workoutSessionName.value || 'Oma salitreeni',
+    date: el.workoutSessionDate.value || state.activeDate,
+    exercises: exercisesData,
+    savedAt: Date.now()
+  };
+  localStorage.setItem(STORAGE_KEYS.WORKOUT_DRAFT, JSON.stringify(draft));
+}
+
+function restoreActiveWorkoutDraft() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.WORKOUT_DRAFT);
+    if (!stored) return;
+    const draft = JSON.parse(stored);
+    if (!draft || !draft.exercises || draft.exercises.length === 0) return;
+
+    state.activeWorkout = { name: draft.name, date: draft.date };
+    el.workoutSessionName.value = draft.name;
+    el.workoutSessionDate.value = draft.date;
+    el.exercisesContainer.innerHTML = '';
+    el.activeWorkoutCard.style.display = 'flex';
+
+    draft.exercises.forEach(ex => {
+      addExerciseBlockToSession(ex.name);
+      const blocks = el.exercisesContainer.querySelectorAll('.exercise-block');
+      const lastBlock = blocks[blocks.length - 1];
+      if (lastBlock) {
+        const tbody = lastBlock.querySelector('.sets-tbody');
+        tbody.innerHTML = '';
+        ex.sets.forEach((s, idx) => {
+          addSetRow(tbody, idx + 1, '-', s.weight || 60, s.reps || 8);
+          const rows = tbody.querySelectorAll('tr');
+          const lastRow = rows[rows.length - 1];
+          if (s.rpe) lastRow.querySelector('.set-rpe').value = s.rpe;
+          if (s.checked) lastRow.querySelector('.btn-check-set').classList.add('checked');
+        });
+      }
+    });
+  } catch (e) {
+    console.error('Error restoring workout draft:', e);
+  }
 }
 
 function getPreviousExerciseSets(exerciseName) {
@@ -1568,7 +1654,8 @@ function addExerciseBlockToSession(exerciseName) {
   `;
 
   const tbody = block.querySelector('.sets-tbody');
-  for (let i = 1; i <= 3; i++) {
+  const numSetsToGenerate = (prevSets && prevSets.length > 0) ? prevSets.length : 3;
+  for (let i = 1; i <= numSetsToGenerate; i++) {
     const p = prevSets[i - 1];
     addSetRow(tbody, i, p ? `${p.weight_kg} kg × ${p.reps}` : '-', p ? p.weight_kg : 60, p ? p.reps : 8);
   }
@@ -1576,6 +1663,7 @@ function addExerciseBlockToSession(exerciseName) {
   block.querySelector('.btn-add-set').addEventListener('click', () => {
     const curCount = tbody.querySelectorAll('tr').length;
     addSetRow(tbody, curCount + 1, '-', 60, 8);
+    saveActiveWorkoutDraft();
   });
 
   block.querySelector('.btn-remove-ex').addEventListener('click', () => {
@@ -1589,10 +1677,12 @@ function addExerciseBlockToSession(exerciseName) {
           </div>
         `;
       }
+      saveActiveWorkoutDraft();
     }
   });
 
   el.exercisesContainer.appendChild(block);
+  saveActiveWorkoutDraft();
 }
 
 function addSetRow(tbody, setNumber, prevText, defWeight, defReps) {
@@ -1607,12 +1697,17 @@ function addSetRow(tbody, setNumber, prevText, defWeight, defReps) {
     <td><button type="button" class="btn-remove-set" title="Poista sarja">✕</button></td>
   `;
 
+  tr.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', saveActiveWorkoutDraft);
+  });
+
   const checkBtn = tr.querySelector('.btn-check-set');
   checkBtn.addEventListener('click', () => {
     checkBtn.classList.toggle('checked');
     if (checkBtn.classList.contains('checked')) {
       startRestTimer(90);
     }
+    saveActiveWorkoutDraft();
   });
 
   tr.querySelector('.btn-remove-set').addEventListener('click', () => {
@@ -1620,9 +1715,66 @@ function addSetRow(tbody, setNumber, prevText, defWeight, defReps) {
     tbody.querySelectorAll('tr').forEach((row, idx) => {
       row.querySelector('.set-idx').textContent = idx + 1;
     });
+    saveActiveWorkoutDraft();
   });
 
   tbody.appendChild(tr);
+}
+
+function renderLatestWorkoutSpotlight() {
+  if (!el.latestWorkoutSpotlight) return;
+  if (!state.workouts || state.workouts.length === 0) {
+    el.latestWorkoutSpotlight.style.display = 'none';
+    el.latestWorkoutSpotlight.innerHTML = '';
+    return;
+  }
+
+  const latest = state.workouts[state.workouts.length - 1];
+  const exMap = {};
+  let totalVol = 0;
+  latest.sets.forEach(s => {
+    totalVol += (s.weight_kg * s.reps);
+    if (!exMap[s.exercise_name]) exMap[s.exercise_name] = [];
+    exMap[s.exercise_name].push(`${s.weight_kg}kg×${s.reps}`);
+  });
+
+  const exHtml = Object.keys(exMap).map(name => `
+    <div class="latest-ex-item">
+      <span class="latest-ex-item-name">⚡ ${escapeHtml(name)}</span>
+      <span class="latest-ex-item-sets">${exMap[name].join(' • ')}</span>
+    </div>
+  `).join('');
+
+  el.latestWorkoutSpotlight.innerHTML = `
+    <div class="latest-workout-header">
+      <div class="latest-workout-title-group">
+        <h3>🏆 Viimeisin treenisi: ${escapeHtml(latest.name)}</h3>
+        <span class="latest-workout-date">Suoritettu: ${latest.date} • ${latest.sets.length} sarjaa • Volyymi ${Math.round(totalVol)} kg</span>
+      </div>
+      <button type="button" class="btn btn-small btn-primary" id="btn-repeat-latest-workout">
+        🔄 Toista tämä treeni edellisillä painoilla
+      </button>
+    </div>
+    <div class="latest-exercises-grid">
+      ${exHtml}
+    </div>
+  `;
+  el.latestWorkoutSpotlight.style.display = 'flex';
+
+  const repeatBtn = document.getElementById('btn-repeat-latest-workout');
+  if (repeatBtn) {
+    repeatBtn.addEventListener('click', () => {
+      repeatWorkoutSession(latest);
+    });
+  }
+}
+
+function repeatWorkoutSession(sess) {
+  const distinctEx = [];
+  sess.sets.forEach(s => {
+    if (!distinctEx.includes(s.exercise_name)) distinctEx.push(s.exercise_name);
+  });
+  startNewWorkoutSession(sess.name, distinctEx);
 }
 
 function openExercisePickerModal() {
@@ -1804,11 +1956,13 @@ function handleFinishWorkout() {
 
   el.activeWorkoutCard.style.display = 'none';
   stopRestTimer();
+  localStorage.removeItem(STORAGE_KEYS.WORKOUT_DRAFT);
   refreshAllViews();
   alert('Treeni tallennettu onnistuneesti!');
 }
 
 function renderPastWorkouts() {
+  renderLatestWorkoutSpotlight();
   el.workoutCountLabel.textContent = `${state.workouts.length} treeniä`;
   el.pastWorkoutsList.innerHTML = '';
   if (state.workouts.length === 0) {
@@ -1854,6 +2008,368 @@ window.deleteWorkoutSession = (id) => {
     renderPastWorkouts();
   }
 };
+
+/**
+ * =========================================================================
+ * AI FITNESS & NUTRITION COACH & TECHNIQUE VIDEO LIBRARY
+ * =========================================================================
+ */
+const TECHNIQUE_VIDEOS = [
+  {
+    title: 'Takakyykky tangolla (Barbell Squat)',
+    cat: 'Vapaat painot',
+    cues: 'Jalkaterät lievästi ulospäin, rintakehä pystyssä, keskivartalo lukittuna. Laskeudu hallitusti niin että reisi vähintään vaakatasossa. Polvet liikkuvat varpaiden suuntaisesti.',
+    mistake: 'Polvien kääntyminen sisäänpäin tai alaselän pyöristyminen alhaalla ("butt wink").',
+    videoUrl: 'https://www.youtube.com/results?search_query=takakyykky+tekniikka'
+  },
+  {
+    title: 'Penkkipunnerrus tangolla (Bench Press)',
+    cat: 'Vapaat painot',
+    cues: 'Lapaluut yhteen ja alas penkkiin, kevyt luonnollinen kaari alaselässä, jalat tukevasti lattiassa. Laske tanko rinnan alaosaan ja työnnä kyynärpäät n. 45–70 asteen kulmassa.',
+    mistake: 'Kyynärpäiden leviäminen 90 asteen t-asentoon (olkapääkipu) tai pään nostaminen penkistä.',
+    videoUrl: 'https://www.youtube.com/results?search_query=penkkipunnerrus+tekniikka'
+  },
+  {
+    title: 'Maastaveto (Deadlift)',
+    cat: 'Vapaat painot',
+    cues: 'Tanko kiinni säärissä, selkä neutraalina ja latsit aktivoituna ("kierrä tankoa"). Nosta työntämällä lattiaa pois jaloilla, ja ojenna lantio huipussa ilman takanojaa.',
+    mistake: 'Selän pyöristyminen, tangon karkaaminen irti kehosta tai liiallinen takanoja yläasennossa.',
+    videoUrl: 'https://www.youtube.com/results?search_query=maastaveto+tekniikka'
+  },
+  {
+    title: 'Pystypunnerrus tangolla seisten (Overhead Press)',
+    cat: 'Vapaat painot',
+    cues: 'Pakarat ja vatsa tiukasti jännitettyinä. Työnnä tanko suoraan ylös ja siirrä pää tangon ali yläasennossa. Lukitse olkapäät tukevasti ylhäällä.',
+    mistake: 'Liiallinen alaselän notkistaminen taaksepäin tai jaloilla pomputtaminen (paitsi vauhtipunnerruksessa).',
+    videoUrl: 'https://www.youtube.com/results?search_query=pystypunnerrus+tekniikka'
+  },
+  {
+    title: 'Leuanveto & Ylätalja (Pull-ups & Lat Pulldown)',
+    cat: 'Vapaat painot & Taljat',
+    cues: 'Aloita liike aina vetämällä lapaluut alas ja yhteen. Vedä kyynärpäitä kohti kylkiä ja vie rintaa kohti tankoa. Pidä liike rauhallisena ilman repimistä.',
+    mistake: 'Hauiksilla nykiminen ilman lapojen käyttöä ja selän liiallinen heiluttaminen.',
+    videoUrl: 'https://www.youtube.com/results?search_query=ylatalja+tekniikka'
+  },
+  {
+    title: 'Jalkaprässi (Leg Press -laite)',
+    cat: 'Laitteet',
+    cues: 'Säädä kelkka ja penkki niin, että alaselkä pysyy tiukasti penkissä kiinni alhaallakin. Älä ojenna polvia aivan lukkoon yläasennossa nivelten suojaamiseksi.',
+    mistake: 'Pakaran ja ristiluun nouseminen irti penkistä liian syvällä (altistaa alaselkäkivulle).',
+    videoUrl: 'https://www.youtube.com/results?search_query=jalkaprassi+tekniikka'
+  },
+  {
+    title: 'Ristikkäistalja & Pec Deck (Taljat & Laitteet)',
+    cat: 'Laitteet',
+    cues: 'Pidä rintakehä ylhäällä ja lapaluut tuettuna. Kyynärvarsissa pieni vakaa kulma koko liikkeen ajan. Keskity puristamaan rintalihakset yhteen supistusvaiheessa.',
+    mistake: 'Olkapäiden kääntyminen eteenpäin ja liian raskaat painot, jolloin liike muuttuu punnerrukseksi.',
+    videoUrl: 'https://www.youtube.com/results?search_query=pec+deck+tekniikka'
+  },
+  {
+    title: 'Reiden ojennus & koukistus (Leg Extension & Curl)',
+    cat: 'Laitteet',
+    cues: 'Aseta laitteen kääntönivel (akseli) tismalleen polvinivelesi korkeudelle. Nilkkatuki säären alaosaan. Hallittu 2s nosto ja 2s rauhallinen lasku.',
+    mistake: 'Painopakan paukuttaminen ja vartalon repiminen vauhdilla.',
+    videoUrl: 'https://www.youtube.com/results?search_query=reiden+ojennus+tekniikka'
+  }
+];
+
+function initCoachBot() {
+  if (!el.coachChatMessages) return;
+
+  const storedChat = localStorage.getItem(STORAGE_KEYS.COACH_CHAT);
+  if (storedChat) {
+    try {
+      const messages = JSON.parse(storedChat);
+      if (messages.length > 0) {
+        el.coachChatMessages.innerHTML = '';
+        messages.forEach(m => appendChatMessage(m.sender, m.text, false));
+      } else {
+        showCoachWelcome();
+      }
+    } catch (e) {
+      showCoachWelcome();
+    }
+  } else {
+    showCoachWelcome();
+  }
+
+  // Quick topics
+  document.querySelectorAll('.coach-topic-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const topic = btn.dataset.topic;
+      handleQuickTopic(topic, btn.textContent);
+    });
+  });
+
+  // Chat submit form
+  if (el.coachChatForm) {
+    el.coachChatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = el.coachUserInput.value.trim();
+      if (!text) return;
+      el.coachUserInput.value = '';
+      sendUserMessageToCoach(text);
+    });
+  }
+
+  // Clear chat
+  if (el.btnClearCoachChat) {
+    el.btnClearCoachChat.addEventListener('click', () => {
+      if (confirm('Tyhjennetäänkö keskusteluhistoria valmentajan kanssa?')) {
+        localStorage.removeItem(STORAGE_KEYS.COACH_CHAT);
+        el.coachChatMessages.innerHTML = '';
+        showCoachWelcome();
+      }
+    });
+  }
+
+  renderTechniqueLibrary();
+}
+
+function renderCoachTab() {
+  if (!el.techniqueCardsGrid || el.techniqueCardsGrid.children.length === 0) {
+    renderTechniqueLibrary();
+  }
+}
+
+function renderTechniqueLibrary() {
+  if (!el.techniqueCardsGrid) return;
+  el.techniqueCardsGrid.innerHTML = '';
+
+  TECHNIQUE_VIDEOS.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'tech-card';
+    card.innerHTML = `
+      <div>
+        <div class="tech-card-header">
+          <h4 class="tech-card-title">${escapeHtml(item.title)}</h4>
+          <span class="tech-card-cat">${escapeHtml(item.cat)}</span>
+        </div>
+        <p class="tech-card-cues" style="margin-top: 8px;">
+          <strong>Oikea tekniikka:</strong> ${item.cues}<br>
+          <strong style="color:var(--color-danger); margin-top: 4px; display:inline-block;">Varo virhettä:</strong> ${item.mistake}
+        </p>
+      </div>
+      <div class="tech-card-actions">
+        <a href="${item.videoUrl}" target="_blank" rel="noopener noreferrer" class="tech-video-btn">
+          ▶ Katso tekniikkavideo (YouTube)
+        </a>
+      </div>
+    `;
+    el.techniqueCardsGrid.appendChild(card);
+  });
+}
+
+function showCoachWelcome() {
+  if (!el.coachChatMessages) return;
+  el.coachChatMessages.innerHTML = '';
+  appendChatMessage('bot', `
+    Moi! 👋 Olen <strong>Sali- ja Ravintovalmentajasi</strong>.
+    <br><br>
+    Voit kysyä minulta mitä tahansa liittyen:
+    <ul>
+      <li>🏋️ <strong>Vapaapaino- ja laitetekniikoihin</strong> sekä liikeohjeisiin</li>
+      <li>🥗 <strong>Ravitsemukseen</strong>: mitä syödä ennen ja jälkeen treenin</li>
+      <li>🔥 <strong>Kalorivajeeseen</strong> ja rasvanpolton optimointiin</li>
+      <li>🚶 <strong>Askeleisiin ja arkiliikunnan (NEAT)</strong> hyödyntämiseen laihtumisessa</li>
+    </ul>
+    Valitse yltä pika-aihe tai kirjoita kysymyksesi suoraan alle!
+  `, true);
+}
+
+function appendChatMessage(sender, htmlText, save = true) {
+  if (!el.coachChatMessages) return;
+
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `coach-msg ${sender}`;
+  msgDiv.innerHTML = `
+    <div class="msg-bubble">
+      ${htmlText}
+    </div>
+  `;
+  el.coachChatMessages.appendChild(msgDiv);
+  el.coachChatMessages.scrollTop = el.coachChatMessages.scrollHeight;
+
+  if (save) {
+    const stored = localStorage.getItem(STORAGE_KEYS.COACH_CHAT);
+    const messages = stored ? JSON.parse(stored) : [];
+    messages.push({ sender, text: htmlText, time: Date.now() });
+    if (messages.length > 40) messages.shift();
+    localStorage.setItem(STORAGE_KEYS.COACH_CHAT, JSON.stringify(messages));
+  }
+}
+
+function handleQuickTopic(topic, label) {
+  appendChatMessage('user', escapeHtml(label));
+
+  let reply = '';
+  if (topic === 'vaje') {
+    reply = `
+      <h4>🔥 Millainen kalorivaje laihtumiseen tarvitaan?</h4>
+      <p>Tieteellisen näytön mukaan <strong>maltillinen 300–500 kcal päivittäinen vaje</strong> on optimaalisin rasvanpolttoon:</p>
+      <ul>
+        <li><strong>Tahti:</strong> Noin <strong>0,3–0,5 kg rasvaa viikossa</strong> (1 kg rasvakudosta vastaa noin 7700 kcal).</li>
+        <li><strong>Miksi ei liian kova vaje (-1000 kcal)?</strong> Liian suuri vaje polttaa lihasmassaa rasvan sijaan, hidastaa lepoaineenvaihduntaa (säästöliekki) ja romuttaa hormonitoiminnan sekä treenitehot.</li>
+        <li><strong>Proteiini:</strong> Pidä proteiininsaanti dieetillä korkealla (<strong>1,8–2,2 g / painokilo</strong>), jotta kehosi säästää lihakset ja polttaa vain rasvaa!</li>
+      </ul>
+    `;
+  } else if (topic === 'askeleet') {
+    reply = `
+      <h4>🚶 Askeleet ja arkiliikunta (NEAT) rasvanpoltossa</h4>
+      <p><strong>Arkiliikunta (NEAT = Non-Exercise Activity Thermogenesis)</strong> kuluttaa usein <em>enemmän energiaa päivässä kuin 1 tunnin hikinen salitreeni!</em></p>
+      <ul>
+        <li><strong>Askelten teho:</strong> 8 000 – 10 000 askelta päivässä polttaa n. <strong>300–500 kcal ylimääräistä</strong> riippuen painostasi.</li>
+        <li><strong>Miksi kävely voittaa kovan juoksun dieetillä?</strong> Kävely ei kuormita hermostoa, se ei haittaa salitreeneistä palautumista, eikä se laukaise valtavaa sudennälkää toisin kuin rankka kardio.</li>
+        <li><strong>Parhaat arkiliikuntamallit arjessa:</strong>
+          <ul>
+            <li>Kävele portaat hissin sijaan (polttaa 5x enemmän energiaa).</li>
+            <li>Hoida puhelut ja palaverit kävellen.</li>
+            <li>Käytä seisomatyöpistettä osan päivää (seisominen kuluttaa 30–50 kcal/h enemmän kuin istuminen).</li>
+            <li>Käy 15–20 minuutin kävelyllä ruokailujen jälkeen (tasaa verensokeripiikkejä).</li>
+          </ul>
+        </li>
+      </ul>
+    `;
+  } else if (topic === 'ruoka') {
+    reply = `
+      <h4>🥗 Miten ruoka vaikuttaa salitreeniin ja tuloksiin?</h4>
+      <p>Ravitsemus määrää treenitehosi ja sen, miten nopeasti lihakset palautuvat ja kasvavat:</p>
+      <ul>
+        <li><strong>Ennen treeniä (1–2 h):</strong> Syö helposti sulavia hiilihydraatteja (esim. kaurapuuro, banaani, riisi) ja laadukasta proteiinia. Vältä raskasta rasvaa juuri ennen salia, jottei vatsa tunnu raskaalta.</li>
+        <li><strong>Treenin jälkeen:</strong> Nauti <strong>25–40 g proteiinia</strong> (esim. heraproteiini, rahka, kana) lihasproteiinisynteesin käynnistämiseksi sekä hiilihydraatteja glykogeenivarastojen täyttöön.</li>
+        <li><strong>Vuorokauden kokonaisuus ratkaisee:</strong> Syö proteiinia <strong>1,6–2,2 g / painokilo</strong> jaettuna 3–5 aterialle päivän mittaan.</li>
+        <li><strong>Nesteytys:</strong> Jo 2 % nestehukka heikentää lihasvoimaa ja kestävyyttä 10–15 %. Juo 2–3 litraa vettä päivässä!</li>
+      </ul>
+    `;
+  } else if (topic === 'tekniikat') {
+    reply = `
+      <h4>🏋️ Vapaat painot: Kyykky, penkkipunnerrus & maastaveto</h4>
+      <p>Vapaat painot ovat voimaharjoittelun kuningasliikkeitä, koska ne aktivoivat kymmeniä tukilihaksia samanaikaisesti:</p>
+      <ul>
+        <li><strong>Kyykky:</strong> Jalkaterät lievästi ulos, rintakehä ylhäällä, polvet varpaiden suuntaan. Syvyys vähintään reiden vaakatasoon.</li>
+        <li><strong>Penkki:</strong> Lapaluut tiukasti yhteen ja alas penkkiin, luonnollinen kaari, jalkapohjat lattiassa. Kyynärpäät n. 45–70° kulmassa.</li>
+        <li><strong>Maastaveto:</strong> Tanko hipoo sääriä, selkä neutraalina, työnnä lattiaa pois jaloilla ja lukitse lantio suoraksi ilman yliojentamista.</li>
+      </ul>
+      <p>👉 <em>Katso alta videot ja tarkemmat ohjeet Liiketekniikat-korteista!</em></p>
+    `;
+  } else if (topic === 'laitteet') {
+    reply = `
+      <h4>⚙️ Salilaitteiden säätö ja fiksut käyttötavat</h4>
+      <p>Laitteet ovat turvallisia, ohjaavat liikerataa ja mahdollistavat lihaksen viemisen loppuun asti (failureen) ilman pudottamisvaaraa:</p>
+      <ul>
+        <li><strong>Säädä laite aina omille mitoillesi:</strong> Laitteen kääntöpisteen (akselin) tulee olla tismalleen samalla korkeudella kuin treenattava nivel (esim. polvinivel reiden ojennuslaitteessa).</li>
+        <li><strong>Pidä tuki penkissä:</strong> Jalkaprässissä alaselkä ja pakarat eivät saa nousta irti penkistä alhaalla.</li>
+        <li><strong>Yhdistä fiksusti:</strong> Aloita treeni raskaalla vapaapainoliikkeellä ja viimeistele laitteilla ja taljoilla!</li>
+      </ul>
+    `;
+  } else if (topic === 'progressio') {
+    reply = `
+      <h4>📈 Progressiivinen ylikuormitus (Progressive Overload)</h4>
+      <p>Lihas kasvaa vain, jos sille annetaan uusi syy sopeutua:</p>
+      <ul>
+        <li><strong>Miten toteuttaa:</strong> Pyri lisäämään joko <strong>1 toisto enemmän</strong> samalla painolla tai lisäämään <strong>+1–2,5 kg</strong> tankoon viikosta toiseen.</li>
+        <li><strong>Hyödynnä Strong-treenilokia:</strong> Näet aina edellisen treenisi sarjat ja painot, joten tavoitteesi on yksinkertainen: tee vähän enemmän kuin viime kerralla!</li>
+      </ul>
+    `;
+  }
+
+  setTimeout(() => appendChatMessage('bot', reply), 300);
+}
+
+function sendUserMessageToCoach(text) {
+  appendChatMessage('user', escapeHtml(text));
+
+  const lower = text.toLowerCase();
+  let response = '';
+
+  if (lower.includes('vaje') || lower.includes('laihtu') || lower.includes('rasva') || lower.includes('miinus') || lower.includes('kalor')) {
+    response = `
+      <h4>🔥 Kalorivaje ja rasvanpoltto</h4>
+      <p>Rasvanpolton perussääntö on <strong>maltillinen 300–500 kcal vaje</strong> päivässä:</p>
+      <ul>
+        <li>Tällä vajeella poltat noin <strong>0,3–0,5 kg puhdasta rasvaa viikossa</strong> ilman lihashävikkiä.</li>
+        <li>1 kg rasvakudosta vastaa noin 7700 kcal.</li>
+        <li>Muista syödä runsaasti proteiinia (n. 2 g / painokilo) ja hyödyntää arkiliikuntaa (8000–10000 askelta/pv), jotta aineenvaihdunta pysyy vilkkaana!</li>
+      </ul>
+    `;
+  } else if (lower.includes('askel') || lower.includes('kävel') || lower.includes('neat') || lower.includes('arki') || lower.includes('portaa')) {
+    response = `
+      <h4>🚶 Arkiliikunnan (NEAT) voima</h4>
+      <p>Päivittäinen arkiliikunta on usein tehokkaampi rasvanpolttaja kuin rankka kardio:</p>
+      <ul>
+        <li><strong>10 000 askelta</strong> kuluttaa n. 350–500 kcal riippuen painostasi.</li>
+        <li>Kävely ei rasita lihaksia tai keskushermostoa, joten se ei häiritse salitreeneistä palautumista.</li>
+        <li>Kokeile valita portaat hissin sijaan, seiso osan työpäivää ja ota lyhyitä kävelypätkiä ruokailujen jälkeen!</li>
+      </ul>
+    `;
+  } else if (lower.includes('ruoka') || lower.includes('syö') || lower.includes('proteiin') || lower.includes('hiilar') || lower.includes('ravinto') || lower.includes('palautu')) {
+    response = `
+      <h4>🥗 Ravitsemus ja treeni</h4>
+      <p>Näin maksimoit treenitehot ja palautumisen:</p>
+      <ul>
+        <li><strong>Ennen treeniä (1–2h):</strong> Hiilihydraatteja (esim. kaurapuuro, banaani) täyttämään lihasten glykogeenivarastot.</li>
+        <li><strong>Treenin jälkeen:</strong> 25–40 g proteiinia korjaamaan lihasvaurioita ja käynnistämään kasvu.</li>
+        <li><strong>Päivän proteiinitavoite:</strong> 1,6–2,2 g per painokilo (laskurimme laskee tämän automaattisesti!).</li>
+        <li><strong>Juominen:</strong> Juo 2–3 litraa vettä päivässä, sillä pienikin nestehukka vie voimat tangosta.</li>
+      </ul>
+    `;
+  } else if (lower.includes('kyykk') || lower.includes('squat')) {
+    response = `
+      <h4>🏋️ Kyykkytekniikan avaimet</h4>
+      <ul>
+        <li>Asetu lantion levyiseen tai hieman leveämpään asentoon, varpaat 15–30° ulospäin.</li>
+        <li>Vedä ilmaa vatsaan ja lukitse keskivartalo tiukaksi.</li>
+        <li>Laskeudu niin, että reisi käy vaakatasossa. Työnnä polvia aktiivisesti varpaiden suuntaan.</li>
+        <li>Työnnä ylös koko jalkapohjalla!</li>
+      </ul>
+      <p>👉 Katso tarkka opastusvideo alla olevasta liikekortista!</p>
+    `;
+  } else if (lower.includes('penkki') || lower.includes('bench')) {
+    response = `
+      <h4>🏋️ Penkkipunnerruksen perusohjeet</h4>
+      <ul>
+        <li>Vedä lapaluut yhteen ja paina ne tukevasti penkkiin.</li>
+        <li>Pidä jalat jämäkästi lattiassa ja alaselässä pieni luonnollinen kaari.</li>
+        <li>Laske tanko hallitusti rinnan alaosaan ja pidä kyynärpäät n. 45–70 asteen kulmassa kylkiin nähden.</li>
+      </ul>
+      <p>👉 Katso tarkka opastusvideo alla olevasta liikekortista!</p>
+    `;
+  } else if (lower.includes('mave') || lower.includes('maastaveto') || lower.includes('deadlift')) {
+    response = `
+      <h4>🏋️ Maastavedon perusohjeet</h4>
+      <ul>
+        <li>Tanko kiinni säärissä, jalkaterät lantion leveydellä.</li>
+        <li>Ota tangosta kiinni, pidä selkä suorana ja vedä latsit tiukaksi.</li>
+        <li>Työnnä lattiaa jaloilla ja nosta tankoa sääriä ja reisiä pitkin.</li>
+        <li>Ojenna lantio ylhäällä suoraksi – älä nojaa taaksepäin!</li>
+      </ul>
+      <p>👉 Katso tarkka opastusvideo alla olevasta liikekortista!</p>
+    `;
+  } else if (lower.includes('laite') || lower.includes('präss') || lower.includes('talja')) {
+    response = `
+      <h4>⚙️ Salilaitteiden käyttö</h4>
+      <p>Salilaitteet ovat turvallinen tapa treenata lihas uupumukseen asti:</p>
+      <ul>
+        <li>Säädä laitteen nivelkohta aina samalle korkeudelle oman nivelesi kanssa.</li>
+        <li>Pidä liike rauhallisena: 2 sekuntia nostoon, 2 sekuntia laskuun. Älä päästä painopakan levyjä paukahtamaan.</li>
+        <li>Jalkaprässissä älä päästä alaselkää pyöristymään irti selkänojasta!</li>
+      </ul>
+    `;
+  } else {
+    response = `
+      <h4>Kiitos kysymyksestä! 💡</h4>
+      <p>Salilla kehittymisen ja rasvanpolton kolme tärkeintä sääntöä ovat:</p>
+      <ol>
+        <li><strong>Progressiivinen ylikuormitus:</strong> Pyri aina tekemään edes yksi toisto tai 1 kg enemmän kuin edellisessä treenissäsi.</li>
+        <li><strong>Ravitsemus & kaloritasapaino:</strong> Syö 1,6–2,2 g proteiinia per painokilo ja säädä kalorit tavoitteesi mukaan (-300...-500 kcal rasvanpolttoon, +200...300 kcal lihaskasvuun).</li>
+        <li><strong>Arkiliikunta & uni:</strong> Kerää 8 000–10 000 askelta päivässä ja nuku 7–9 tuntia laadukasta unta.</li>
+      </ol>
+      <p>Voit myös klikata yltä pika-aiheita tai tutustua alla oleviin opastusvideoihin!</p>
+    `;
+  }
+
+  setTimeout(() => appendChatMessage('bot', response), 350);
+}
 
 /**
  * =========================================================================

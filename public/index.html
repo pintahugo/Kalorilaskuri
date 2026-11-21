@@ -56,6 +56,9 @@
       <button class="nav-tab" data-tab="tab-history">
         <span class="tab-icon">📋</span> <span class="tab-label">Historia</span>
       </button>
+      <button class="nav-tab" data-tab="tab-coach">
+        <span class="tab-icon">🤖</span> <span class="tab-label">Valmentaja</span>
+      </button>
     </nav>
 
     <!-- TAB 1: DASHBOARD -->
@@ -554,6 +557,11 @@
         </div>
       </div>
 
+      <!-- Spotlight: Viimeisin suoritettu treeni & painot -->
+      <section class="latest-workout-card" id="latest-workout-spotlight" style="display: none;">
+        <!-- Populated dynamically via JS -->
+      </section>
+
       <!-- Active Workout Session Area -->
       <section class="active-workout-card" id="active-workout-card" style="display: none;">
         <div class="session-top-meta">
@@ -635,6 +643,68 @@
           </table>
         </div>
       </section>
+    </main>
+
+    <!-- TAB 5: AI FITNESS & NUTRITION COACH (Sali- ja Ravintovalmentaja) -->
+    <main id="tab-coach" class="tab-content">
+      <div class="coach-container">
+        <!-- Hero Header -->
+        <div class="coach-hero-card">
+          <div class="coach-avatar">🤖</div>
+          <div class="coach-hero-text">
+            <h2>Sali- ja Ravintovalmentaja</h2>
+            <p>Henkilökohtainen oppaasi salille, tekniikoihin ja ravitsemukseen. Kysy rohkeasti tai valitse suosittu pika-aihe alta!</p>
+          </div>
+        </div>
+
+        <!-- Quick Topics -->
+        <div class="coach-quick-topics">
+          <span class="quick-topics-label">Suosittuja aiheita:</span>
+          <div class="quick-topic-buttons">
+            <button type="button" class="coach-topic-btn" data-topic="vaje">🔥 Millainen kalorivaje laihtumiseen?</button>
+            <button type="button" class="coach-topic-btn" data-topic="askeleet">🚶 Askeleet & arkiliikunta (NEAT)</button>
+            <button type="button" class="coach-topic-btn" data-topic="ruoka">🥗 Ruoka ennen ja jälkeen treenin</button>
+            <button type="button" class="coach-topic-btn" data-topic="tekniikat">🏋️ Vapaat painot: kyykky, penkki & mave</button>
+            <button type="button" class="coach-topic-btn" data-topic="laitteet">⚙️ Salilaitteiden säätö & käyttö</button>
+            <button type="button" class="coach-topic-btn" data-topic="progressio">📈 Miten kehittyä salilla jatkuvasti</button>
+          </div>
+        </div>
+
+        <!-- Chat Stream Window -->
+        <div class="coach-chat-card">
+          <div class="coach-chat-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="online-indicator"></span>
+              <strong>Valmentaja-botti</strong>
+            </div>
+            <button type="button" class="btn btn-small btn-secondary" id="btn-clear-coach-chat" title="Tyhjennä keskustelu">Tyhjennä viestit</button>
+          </div>
+          <div class="coach-chat-window" id="coach-chat-messages">
+            <!-- Messages inserted here -->
+          </div>
+
+          <!-- Chat Input -->
+          <form class="coach-input-bar" id="coach-chat-form">
+            <input type="text" id="coach-user-input" placeholder="Kirjoita kysymys valmentajalle (esim. miten kyykky tehdään oikein?)..." autocomplete="off" required>
+            <button type="submit" class="btn btn-primary" id="btn-send-coach-msg">
+              Kysy 🚀
+            </button>
+          </form>
+        </div>
+
+        <!-- Video & Technique Library -->
+        <section class="technique-library-section">
+          <div class="section-title-row">
+            <div>
+              <h3>🎥 Liiketekniikat ja opastusvideot</h3>
+              <p class="section-desc">Käytännönläheiset ohjeet ja videot vapailla painoilla ja laitteilla treenaamiseen.</p>
+            </div>
+          </div>
+          <div class="technique-cards-grid" id="technique-cards-grid">
+            <!-- Populated via JavaScript -->
+          </div>
+        </section>
+      </div>
     </main>
   </div>
 

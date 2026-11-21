@@ -532,19 +532,25 @@
       <div class="workout-header-bar">
         <div>
           <h2>Strong-salitreenilogi</h2>
-          <p class="section-desc">Kirjaa liikkeet, sarjat ja toistot. Vertaa edellisen treenin suoritukseen ja hyödynnä automaattista lepotaukoajastinta.</p>
+          <p class="section-desc">Luo täysin oma treeni ja valitse omat liikkeet, tai aloita valmiista treenipohjasta.</p>
         </div>
         <div class="workout-actions">
-          <select id="workout-template-select" class="select-input">
-            <option value="">Valitse treenipohja...</option>
-            <option value="Push / Työntävät">Push / Työntävät (Rinta, Olkapäät, Ojentajat)</option>
-            <option value="Pull / Vetävät">Pull / Vetävät (Selkä, Hauis)</option>
-            <option value="Legs / Jalat & Vatsat">Legs / Jalat & Vatsat</option>
-            <option value="Full Body / Koko keho">Full Body / Koko keho</option>
-          </select>
-          <button class="btn btn-primary" id="btn-start-workout">
-            <span class="icon">⚡</span> Aloita uusi treeni
+          <button class="btn btn-primary" id="btn-start-custom-workout">
+            <span class="icon">＋</span> Luo oma treeni
           </button>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <select id="workout-template-select" class="select-input">
+              <option value="">Tai valitse pohja...</option>
+              <optgroup label="Valmiit pohjat">
+                <option value="Push / Työntävät">Push / Työntävät (Rinta, Olkapäät, Ojentajat)</option>
+                <option value="Pull / Vetävät">Pull / Vetävät (Selkä, Hauis)</option>
+                <option value="Legs / Jalat & Vatsat">Legs / Jalat & Vatsat</option>
+                <option value="Full Body / Koko keho">Full Body / Koko keho</option>
+              </optgroup>
+              <optgroup label="Omat tallennetut pohjat" id="custom-templates-optgroup" style="display: none;"></optgroup>
+            </select>
+            <button class="btn btn-secondary" id="btn-start-workout">Aloita</button>
+          </div>
         </div>
       </div>
 
@@ -554,7 +560,7 @@
           <div class="form-grid-2">
             <div class="form-group">
               <label>Treenin nimi</label>
-              <input type="text" id="workout-session-name" placeholder="esim. Push / Työntävät" required>
+              <input type="text" id="workout-session-name" placeholder="esim. Oma salitreeni" required>
             </div>
             <div class="form-group">
               <label>Päivämäärä</label>
@@ -568,10 +574,13 @@
         </div>
 
         <div class="workout-footer-bar">
-          <button type="button" class="btn btn-secondary" id="btn-add-exercise">
-            <span class="icon">＋</span> Lisää liike
+          <button type="button" class="btn btn-primary" id="btn-add-exercise">
+            <span class="icon">＋</span> Valitse / lisää liike
           </button>
-          <div class="workout-save-group">
+          <div class="workout-save-group" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary" id="btn-save-as-template" title="Tallenna tämä treeni pohjaksi tulevia treenejä varten">
+              💾 Tallenna pohjaksi
+            </button>
             <button type="button" class="btn btn-secondary" id="btn-cancel-workout">Peruuta</button>
             <button type="button" class="btn btn-success" id="btn-finish-workout">
               ✓ Tallenna treeni
@@ -980,6 +989,47 @@
 
         <div class="modal-footer">
           <button type="button" class="btn btn-primary btn-block" id="btn-save-settings">Tallenna asetukset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: Exercise Picker & Custom Movement Creator -->
+  <div class="modal-backdrop" id="exercise-picker-modal">
+    <div class="modal-dialog modal-wide">
+      <div class="modal-header">
+        <h3>Valitse liike treeniin</h3>
+        <button type="button" class="btn-close" id="btn-close-exercise-picker">✕</button>
+      </div>
+      <div class="modal-body-scroll">
+        <!-- Search bar -->
+        <div class="form-group">
+          <input type="text" id="exercise-search-input" placeholder="🔍 Etsi liikettä (esim. penkki, leuanveto, kyykky)...">
+        </div>
+
+        <!-- Muscle Category Filter Pills -->
+        <div class="exercise-categories-row" id="exercise-cat-pills">
+          <button type="button" class="chip-btn active" data-cat="all">Kaikki</button>
+          <button type="button" class="chip-btn" data-cat="Rinta">Rinta</button>
+          <button type="button" class="chip-btn" data-cat="Selkä">Selkä</button>
+          <button type="button" class="chip-btn" data-cat="Jalat">Jalat</button>
+          <button type="button" class="chip-btn" data-cat="Olkapäät">Olkapäät</button>
+          <button type="button" class="chip-btn" data-cat="Kädet">Kädet</button>
+          <button type="button" class="chip-btn" data-cat="Keskivartalo">Keskivartalo</button>
+        </div>
+
+        <!-- Predefined and custom exercises list -->
+        <div class="exercise-picker-list" id="exercise-picker-list">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- Add completely custom exercise section -->
+        <div class="custom-exercise-create-box">
+          <h4 style="font-size: 13px; font-weight: 700; margin-bottom: 6px;">Eikö liikettä löytynyt listalta? Luo oma liike:</h4>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="custom-exercise-input" placeholder="Kirjoita uuden liikkeen nimi..." style="flex: 1;">
+            <button type="button" class="btn btn-primary" id="btn-create-custom-exercise">＋ Luo & lisää</button>
+          </div>
         </div>
       </div>
     </div>

@@ -10,8 +10,57 @@ const STORAGE_KEYS = {
   ENTRIES: 'makrovahti_entries',
   MEALS: 'makrovahti_meals',
   WORKOUTS: 'makrovahti_workouts',
-  FOODS: 'makrovahti_foods'
+  FOODS: 'makrovahti_foods',
+  CUSTOM_TEMPLATES: 'makrovahti_custom_templates',
+  CUSTOM_EXERCISES: 'makrovahti_custom_exercises'
 };
+
+// Curated Gym Exercise Library categorized by muscle group
+const PRESET_EXERCISES = [
+  // Rinta
+  { name: 'Penkkipunnerrus tangolla', cat: 'Rinta' },
+  { name: 'Vinopenkkipunnerrus käsipainoilla', cat: 'Rinta' },
+  { name: 'Ristitaljapunnerrus', cat: 'Rinta' },
+  { name: 'Pec deck -laite', cat: 'Rinta' },
+  { name: 'Dippi (rinta/ojentaja)', cat: 'Rinta' },
+  { name: 'Etunojapunnerrus', cat: 'Rinta' },
+  // Selkä
+  { name: 'Maastaveto', cat: 'Selkä' },
+  { name: 'Leuanveto omalla painolla', cat: 'Selkä' },
+  { name: 'Leuanveto lisäpainolla', cat: 'Selkä' },
+  { name: 'Kulmasoutu tangolla', cat: 'Selkä' },
+  { name: 'Alataljasoutu', cat: 'Selkä' },
+  { name: 'Ylätalja eteen', cat: 'Selkä' },
+  { name: 'T-kulmasoutu', cat: 'Selkä' },
+  // Jalat
+  { name: 'Takakyykky tangolla', cat: 'Jalat' },
+  { name: 'Etukyykky tangolla', cat: 'Jalat' },
+  { name: 'Jalkaprässi', cat: 'Jalat' },
+  { name: 'Reiden ojennus laitteessa', cat: 'Jalat' },
+  { name: 'Reiden koukistus laitteessa', cat: 'Jalat' },
+  { name: 'Romanialainen maastaveto', cat: 'Jalat' },
+  { name: 'Pohjenousu seisten', cat: 'Jalat' },
+  { name: 'Askelkyykky käsipainoilla', cat: 'Jalat' },
+  // Olkapäät
+  { name: 'Pystypunnerrus tangolla', cat: 'Olkapäät' },
+  { name: 'Pystypunnerrus käsipainoilla', cat: 'Olkapäät' },
+  { name: 'Vipunostot sivuille käsipainoilla', cat: 'Olkapäät' },
+  { name: 'Face pull taljassa', cat: 'Olkapäät' },
+  { name: 'Pystysoutu taljassa tai tangolla', cat: 'Olkapäät' },
+  // Kädet
+  { name: 'Hauiskääntö tangolla', cat: 'Kädet' },
+  { name: 'Hauiskääntö käsipainoilla', cat: 'Kädet' },
+  { name: 'Hammer-hauiskääntö', cat: 'Kädet' },
+  { name: 'Hauiskääntö taljassa', cat: 'Kädet' },
+  { name: 'Ojentajapunnerrus taljassa', cat: 'Kädet' },
+  { name: 'Ranskalainen punnerrus', cat: 'Kädet' },
+  { name: 'Kapea penkkipunnerrus', cat: 'Kädet' },
+  // Keskivartalo
+  { name: 'Voimapyörä', cat: 'Keskivartalo' },
+  { name: 'Lankku', cat: 'Keskivartalo' },
+  { name: 'Jalkojen nosto roikkuen', cat: 'Keskivartalo' },
+  { name: 'Vatsarutistus taljassa', cat: 'Keskivartalo' }
+];
 
 // Default generic food items for offline & quick demo use (no personal data)
 const DEFAULT_FOOD_CATALOG = [
@@ -33,6 +82,9 @@ const state = {
   meals: [],
   workouts: [],
   foods: [],
+  customTemplates: [],
+  customExercises: [],
+  exerciseFilterCat: 'all',
   settings: {
     calorie_target: 2400,
     protein_factor: 2.0,
@@ -233,16 +285,28 @@ const el = {
   btnTimerPlus30: document.getElementById('btn-timer-plus30'),
   btnTimerStop: document.getElementById('btn-timer-stop'),
   workoutTemplateSelect: document.getElementById('workout-template-select'),
+  customTemplatesOptgroup: document.getElementById('custom-templates-optgroup'),
   btnStartWorkout: document.getElementById('btn-start-workout'),
+  btnStartCustomWorkout: document.getElementById('btn-start-custom-workout'),
   activeWorkoutCard: document.getElementById('active-workout-card'),
   workoutSessionName: document.getElementById('workout-session-name'),
   workoutSessionDate: document.getElementById('workout-session-date'),
   exercisesContainer: document.getElementById('exercises-container'),
   btnAddExercise: document.getElementById('btn-add-exercise'),
+  btnSaveAsTemplate: document.getElementById('btn-save-as-template'),
   btnCancelWorkout: document.getElementById('btn-cancel-workout'),
   btnFinishWorkout: document.getElementById('btn-finish-workout'),
   pastWorkoutsList: document.getElementById('past-workouts-list'),
-  workoutCountLabel: document.getElementById('workout-count-label')
+  workoutCountLabel: document.getElementById('workout-count-label'),
+
+  // Exercise Picker Modal
+  exercisePickerModal: document.getElementById('exercise-picker-modal'),
+  btnCloseExercisePicker: document.getElementById('btn-close-exercise-picker'),
+  exerciseSearchInput: document.getElementById('exercise-search-input'),
+  exerciseCatPills: document.getElementById('exercise-cat-pills'),
+  exercisePickerList: document.getElementById('exercise-picker-list'),
+  customExerciseInput: document.getElementById('custom-exercise-input'),
+  btnCreateCustomExercise: document.getElementById('btn-create-custom-exercise')
 };
 
 /**
@@ -340,6 +404,14 @@ function loadDataFromStorage() {
       state.foods = [...DEFAULT_FOOD_CATALOG];
       saveToStorage(STORAGE_KEYS.FOODS, state.foods);
     }
+
+    // Custom workout templates
+    const storedTemplates = localStorage.getItem(STORAGE_KEYS.CUSTOM_TEMPLATES);
+    state.customTemplates = storedTemplates ? JSON.parse(storedTemplates) : [];
+
+    // Custom exercises created by the user
+    const storedCustomEx = localStorage.getItem(STORAGE_KEYS.CUSTOM_EXERCISES);
+    state.customExercises = storedCustomEx ? JSON.parse(storedCustomEx) : [];
   } catch (err) {
     console.error('Storage load error:', err);
   }
@@ -359,6 +431,8 @@ function saveAllStateToStorage() {
   saveToStorage(STORAGE_KEYS.MEALS, state.meals);
   saveToStorage(STORAGE_KEYS.WORKOUTS, state.workouts);
   saveToStorage(STORAGE_KEYS.FOODS, state.foods);
+  saveToStorage(STORAGE_KEYS.CUSTOM_TEMPLATES, state.customTemplates);
+  saveToStorage(STORAGE_KEYS.CUSTOM_EXERCISES, state.customExercises);
 }
 
 /**
@@ -492,6 +566,7 @@ function init() {
   bindLifesumMealsEvents();
   bindBarcodeScannerEvents();
   bindStrongWorkoutEvents();
+  populateCustomTemplatesDropdown();
 
   el.mealsActiveDate.value = state.activeDate;
   el.workoutSessionDate.value = state.activeDate;
@@ -1307,9 +1382,32 @@ function handleAddFoodToMeal() {
  * =========================================================================
  */
 function bindStrongWorkoutEvents() {
+  // Start custom empty workout
+  if (el.btnStartCustomWorkout) {
+    el.btnStartCustomWorkout.addEventListener('click', () => {
+      startNewWorkoutSession('Oma salitreeni', []);
+    });
+  }
+
+  // Start from template
   el.btnStartWorkout.addEventListener('click', () => {
     const templateName = el.workoutTemplateSelect.value || 'Oma salitreeni';
-    startNewWorkoutSession(templateName);
+    let exercises = [];
+    if (templateName === 'Push / Työntävät') {
+      exercises = ['Penkkipunnerrus tangolla', 'Pystypunnerrus tangolla', 'Ojentajapunnerrus taljassa'];
+    } else if (templateName === 'Pull / Vetävät') {
+      exercises = ['Maastaveto', 'Leuanveto lisäpainolla', 'Hauiskääntö tangolla'];
+    } else if (templateName === 'Legs / Jalat & Vatsat') {
+      exercises = ['Takakyykky tangolla', 'Jalkaprässi', 'Reiden koukistus laitteessa'];
+    } else if (templateName === 'Full Body / Koko keho') {
+      exercises = ['Takakyykky tangolla', 'Penkkipunnerrus tangolla', 'Leuanveto omalla painolla'];
+    } else {
+      const custom = (state.customTemplates || []).find(t => t.name === templateName);
+      if (custom && custom.exercises) {
+        exercises = custom.exercises;
+      }
+    }
+    startNewWorkoutSession(templateName, exercises);
   });
 
   el.btnCancelWorkout.addEventListener('click', () => {
@@ -1319,12 +1417,48 @@ function bindStrongWorkoutEvents() {
     }
   });
 
-  el.btnAddExercise.addEventListener('click', () => {
-    const name = prompt('Anna uuden liikkeen nimi (esim. Penkkipunnerrus tangolla):');
-    if (name && name.trim()) addExerciseBlockToSession(name.trim());
-  });
+  el.btnAddExercise.addEventListener('click', openExercisePickerModal);
+
+  if (el.btnSaveAsTemplate) {
+    el.btnSaveAsTemplate.addEventListener('click', handleSaveAsTemplate);
+  }
 
   el.btnFinishWorkout.addEventListener('click', handleFinishWorkout);
+
+  // Exercise Picker Modal Events
+  if (el.btnCloseExercisePicker) {
+    el.btnCloseExercisePicker.addEventListener('click', closeExercisePickerModal);
+  }
+  if (el.exercisePickerModal) {
+    el.exercisePickerModal.addEventListener('click', (e) => {
+      if (e.target === el.exercisePickerModal) closeExercisePickerModal();
+    });
+  }
+  if (el.exerciseSearchInput) {
+    el.exerciseSearchInput.addEventListener('input', renderExercisePickerList);
+  }
+  if (el.exerciseCatPills) {
+    el.exerciseCatPills.addEventListener('click', (e) => {
+      const btn = e.target.closest('.chip-btn');
+      if (btn && btn.dataset.cat) {
+        state.exerciseFilterCat = btn.dataset.cat;
+        el.exerciseCatPills.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderExercisePickerList();
+      }
+    });
+  }
+  if (el.btnCreateCustomExercise) {
+    el.btnCreateCustomExercise.addEventListener('click', handleCreateCustomExercise);
+  }
+  if (el.customExerciseInput) {
+    el.customExerciseInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleCreateCustomExercise();
+      }
+    });
+  }
 
   document.querySelectorAll('.btn-timer-preset').forEach(btn => {
     if (btn.dataset.sec) {
@@ -1340,19 +1474,40 @@ function bindStrongWorkoutEvents() {
   el.btnTimerStop.addEventListener('click', stopRestTimer);
 }
 
-function startNewWorkoutSession(name) {
+function populateCustomTemplatesDropdown() {
+  if (!el.customTemplatesOptgroup) return;
+  el.customTemplatesOptgroup.innerHTML = '';
+  if (state.customTemplates && state.customTemplates.length > 0) {
+    el.customTemplatesOptgroup.style.display = 'block';
+    state.customTemplates.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.name;
+      opt.textContent = `★ ${t.name} (${t.exercises ? t.exercises.length : 0} liikettä)`;
+      el.customTemplatesOptgroup.appendChild(opt);
+    });
+  } else {
+    el.customTemplatesOptgroup.style.display = 'none';
+  }
+}
+
+function startNewWorkoutSession(name, exercises = []) {
   state.activeWorkout = { name, date: state.activeDate };
   el.workoutSessionName.value = name;
   el.workoutSessionDate.value = state.activeDate;
   el.exercisesContainer.innerHTML = '';
   el.activeWorkoutCard.style.display = 'flex';
 
-  let defaultExercises = ['Penkkipunnerrus tangolla', 'Pystypunnerrus tangolla', 'Ojentajapunnerrus taljassa'];
-  if (name.includes('Pull')) defaultExercises = ['Maastaveto', 'Leuanveto lisäpainolla', 'Hauiskääntö tangolla'];
-  if (name.includes('Legs')) defaultExercises = ['Takakyykky tangolla', 'Jalkaprässi', 'Reiden koukistus laitteessa'];
-  if (name.includes('Full Body')) defaultExercises = ['Takakyykky tangolla', 'Penkkipunnerrus tangolla', 'Leuanveto'];
+  if (!exercises || exercises.length === 0) {
+    el.exercisesContainer.innerHTML = `
+      <div class="empty-workout-msg" id="empty-workout-msg">
+        💪 <strong>Treeni aloitettu!</strong><br>
+        Valitse omat liikkeet klikkaamalla alla olevaa <strong>"＋ Valitse / lisää liike"</strong> -painiketta.
+      </div>
+    `;
+  } else {
+    exercises.forEach(exName => addExerciseBlockToSession(exName));
+  }
 
-  defaultExercises.forEach(exName => addExerciseBlockToSession(exName));
   el.activeWorkoutCard.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -1370,6 +1525,9 @@ function getPreviousExerciseSets(exerciseName) {
 }
 
 function addExerciseBlockToSession(exerciseName) {
+  const emptyMsg = document.getElementById('empty-workout-msg');
+  if (emptyMsg) emptyMsg.remove();
+
   const block = document.createElement('div');
   block.className = 'exercise-block';
   block.dataset.exercise = exerciseName;
@@ -1388,7 +1546,10 @@ function addExerciseBlockToSession(exerciseName) {
         <h4 class="ex-title">${escapeHtml(exerciseName)}</h4>
         <span class="ex-prev-hint">${prevHint}</span>
       </div>
-      <button type="button" class="btn btn-small btn-secondary btn-add-set">＋ Lisää sarja</button>
+      <div class="ex-header-actions">
+        <button type="button" class="btn btn-small btn-secondary btn-add-set">＋ Lisää sarja</button>
+        <button type="button" class="btn btn-small btn-danger btn-remove-ex" title="Poista tämä liike">✕ Poista liike</button>
+      </div>
     </div>
     <table class="sets-table">
       <thead>
@@ -1399,6 +1560,7 @@ function addExerciseBlockToSession(exerciseName) {
           <th>Toistot</th>
           <th>RPE</th>
           <th style="width: 50px;">Valmis</th>
+          <th style="width: 30px;"></th>
         </tr>
       </thead>
       <tbody class="sets-tbody"></tbody>
@@ -1416,6 +1578,20 @@ function addExerciseBlockToSession(exerciseName) {
     addSetRow(tbody, curCount + 1, '-', 60, 8);
   });
 
+  block.querySelector('.btn-remove-ex').addEventListener('click', () => {
+    if (confirm(`Poistetaanko liike "${exerciseName}" tästä treenistä?`)) {
+      block.remove();
+      if (el.exercisesContainer.querySelectorAll('.exercise-block').length === 0) {
+        el.exercisesContainer.innerHTML = `
+          <div class="empty-workout-msg" id="empty-workout-msg">
+            Ei vielä lisättyjä liikkeitä.<br>
+            Klikkaa alla olevaa <strong>"＋ Valitse / lisää liike"</strong> -painiketta valitaksesi liikkeet!
+          </div>
+        `;
+      }
+    }
+  });
+
   el.exercisesContainer.appendChild(block);
 }
 
@@ -1428,6 +1604,7 @@ function addSetRow(tbody, setNumber, prevText, defWeight, defReps) {
     <td><input type="number" class="set-input-num set-reps" value="${defReps}" min="1"></td>
     <td><input type="number" class="set-input-rpe set-rpe" placeholder="8" min="5" max="10" step="0.5"></td>
     <td><button type="button" class="btn-check-set" title="Kuittaa sarja">✓</button></td>
+    <td><button type="button" class="btn-remove-set" title="Poista sarja">✕</button></td>
   `;
 
   const checkBtn = tr.querySelector('.btn-check-set');
@@ -1438,7 +1615,121 @@ function addSetRow(tbody, setNumber, prevText, defWeight, defReps) {
     }
   });
 
+  tr.querySelector('.btn-remove-set').addEventListener('click', () => {
+    tr.remove();
+    tbody.querySelectorAll('tr').forEach((row, idx) => {
+      row.querySelector('.set-idx').textContent = idx + 1;
+    });
+  });
+
   tbody.appendChild(tr);
+}
+
+function openExercisePickerModal() {
+  if (el.exerciseSearchInput) el.exerciseSearchInput.value = '';
+  state.exerciseFilterCat = 'all';
+  if (el.exerciseCatPills) {
+    el.exerciseCatPills.querySelectorAll('.chip-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.cat === 'all');
+    });
+  }
+  renderExercisePickerList();
+  el.exercisePickerModal.classList.add('open');
+  setTimeout(() => el.exerciseSearchInput && el.exerciseSearchInput.focus(), 150);
+}
+
+function closeExercisePickerModal() {
+  el.exercisePickerModal.classList.remove('open');
+}
+
+function renderExercisePickerList() {
+  if (!el.exercisePickerList) return;
+  el.exercisePickerList.innerHTML = '';
+
+  const query = (el.exerciseSearchInput ? el.exerciseSearchInput.value : '').trim().toLowerCase();
+  const cat = state.exerciseFilterCat || 'all';
+
+  // Merge presets and user custom exercises
+  const allExercises = [...PRESET_EXERCISES, ...(state.customExercises || [])];
+
+  const seen = new Set();
+  const filtered = allExercises.filter(ex => {
+    const key = ex.name.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+
+    const matchQuery = !query || ex.name.toLowerCase().includes(query) || (ex.cat && ex.cat.toLowerCase().includes(query));
+    const matchCat = cat === 'all' || ex.cat === cat;
+    return matchQuery && matchCat;
+  });
+
+  if (filtered.length === 0) {
+    el.exercisePickerList.innerHTML = `
+      <div style="text-align: center; color: var(--text-muted); padding: 18px; font-size: 13px;">
+        Ei hakua vastaavia liikkeitä. Voit luoda täysin oman liikkeen alla olevasta kentästä!
+      </div>
+    `;
+    return;
+  }
+
+  filtered.forEach(ex => {
+    const item = document.createElement('div');
+    item.className = 'exercise-picker-item';
+    item.innerHTML = `
+      <div class="ex-picker-left">
+        <span class="ex-picker-name">${escapeHtml(ex.name)}</span>
+        <span class="ex-picker-cat">${escapeHtml(ex.cat || 'Oma liike')}</span>
+      </div>
+      <button type="button" class="btn btn-small btn-primary">＋ Lisää</button>
+    `;
+    item.addEventListener('click', () => {
+      addExerciseBlockToSession(ex.name);
+      closeExercisePickerModal();
+    });
+    el.exercisePickerList.appendChild(item);
+  });
+}
+
+function handleCreateCustomExercise() {
+  const name = (el.customExerciseInput.value || '').trim();
+  if (!name) return;
+
+  const newEx = { name, cat: 'Oma liike' };
+  if (!state.customExercises) state.customExercises = [];
+  state.customExercises.push(newEx);
+  saveToStorage(STORAGE_KEYS.CUSTOM_EXERCISES, state.customExercises);
+
+  el.customExerciseInput.value = '';
+  addExerciseBlockToSession(name);
+  closeExercisePickerModal();
+}
+
+function handleSaveAsTemplate() {
+  const blocks = el.exercisesContainer.querySelectorAll('.exercise-block');
+  if (blocks.length === 0) {
+    alert('Lisää ensin vähintään yksi liike, jotta voit tallentaa sen treenipohjaksi.');
+    return;
+  }
+
+  const defaultName = el.workoutSessionName.value.trim() || 'Oma treenipohja';
+  const name = prompt('Anna treenipohjalle nimi:', defaultName);
+  if (!name || !name.trim()) return;
+
+  const trimmedName = name.trim();
+  const exercises = Array.from(blocks).map(b => b.dataset.exercise);
+
+  if (!state.customTemplates) state.customTemplates = [];
+  const existingIdx = state.customTemplates.findIndex(t => t.name.toLowerCase() === trimmedName.toLowerCase());
+  if (existingIdx >= 0) {
+    if (!confirm(`Treenipohja nimellä "${trimmedName}" on jo olemassa. Haluatko korvata sen?`)) return;
+    state.customTemplates[existingIdx] = { name: trimmedName, exercises };
+  } else {
+    state.customTemplates.push({ name: trimmedName, exercises });
+  }
+
+  saveToStorage(STORAGE_KEYS.CUSTOM_TEMPLATES, state.customTemplates);
+  populateCustomTemplatesDropdown();
+  alert(`Treenipohja "${trimmedName}" tallennettu! Voit valita sen jatkossa yläreunan pohjavalitsimesta.`);
 }
 
 function startRestTimer(seconds = 90) {

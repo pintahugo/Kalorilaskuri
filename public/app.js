@@ -1637,20 +1637,22 @@ function addExerciseBlockToSession(exerciseName) {
         <button type="button" class="btn btn-small btn-danger btn-remove-ex" title="Poista tämä liike">✕ Poista liike</button>
       </div>
     </div>
-    <table class="sets-table">
-      <thead>
-        <tr>
-          <th style="width: 40px;">Sarja</th>
-          <th>Edellinen</th>
-          <th>kg</th>
-          <th>Toistot</th>
-          <th>RPE</th>
-          <th style="width: 50px;">Valmis</th>
-          <th style="width: 30px;"></th>
-        </tr>
-      </thead>
-      <tbody class="sets-tbody"></tbody>
-    </table>
+    <div class="sets-table-wrap">
+      <table class="sets-table">
+        <thead>
+          <tr>
+            <th style="width: 28px;">#</th>
+            <th class="th-prev">Edellinen</th>
+            <th>kg</th>
+            <th>Toistot</th>
+            <th>RPE</th>
+            <th style="width: 40px;">Valmis</th>
+            <th style="width: 26px;"></th>
+          </tr>
+        </thead>
+        <tbody class="sets-tbody"></tbody>
+      </table>
+    </div>
   `;
 
   const tbody = block.querySelector('.sets-tbody');

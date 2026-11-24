@@ -29,7 +29,7 @@
         <div class="brand-icon">⚡</div>
         <div>
           <h1>Kalori- ja Makrovahti</h1>
-          <p class="subtitle">Yksityinen Lifesum- & Strong -fitnesssovellus • PWA</p>
+          <p class="subtitle">Yksityinen fitness- ja ravintosovellus • PWA</p>
         </div>
       </div>
       <div class="header-actions">
@@ -48,10 +48,10 @@
         <span class="tab-icon">📊</span> <span class="tab-label">Dashboard</span>
       </button>
       <button class="nav-tab" data-tab="tab-meals">
-        <span class="tab-icon">🥗</span> <span class="tab-label">Ateriat (Lifesum)</span>
+        <span class="tab-icon">🥗</span> <span class="tab-label">Ateriat</span>
       </button>
       <button class="nav-tab" data-tab="tab-workout">
-        <span class="tab-icon">🏋️</span> <span class="tab-label">Treeni (Strong)</span>
+        <span class="tab-icon">🏋️</span> <span class="tab-label">Treeni</span>
       </button>
       <button class="nav-tab" data-tab="tab-history">
         <span class="tab-icon">📋</span> <span class="tab-label">Historia</span>
@@ -375,7 +375,7 @@
       </section>
     </main>
 
-    <!-- TAB 2: MEALS & BARCODE SCANNER (Lifesum View) -->
+    <!-- TAB 2: MEALS & BARCODE SCANNER -->
     <main id="tab-meals" class="tab-content">
       <div class="meals-header-bar">
         <div class="date-selector-row">
@@ -394,7 +394,7 @@
         </div>
       </div>
 
-      <!-- Lifesum Style Day Summary Rings / Bars -->
+      <!-- Day Summary Rings / Bars -->
       <section class="lifesum-summary-card">
         <div class="lifesum-rings-col">
           <div class="cal-circle-wrap">
@@ -512,7 +512,7 @@
       </section>
     </main>
 
-    <!-- TAB 3: WORKOUT LOG & REST TIMER (Strong View) -->
+    <!-- TAB 3: WORKOUT LOG & REST TIMER -->
     <main id="tab-workout" class="tab-content">
       <!-- Active Floating Rest Timer Banner -->
       <aside class="sticky-rest-timer" id="sticky-rest-timer" style="display: none;">
@@ -534,8 +534,8 @@
 
       <div class="workout-header-bar">
         <div>
-          <h2>Strong-salitreenilogi</h2>
-          <p class="section-desc">Luo täysin oma treeni ja valitse omat liikkeet, tai aloita valmiista treenipohjasta.</p>
+          <h2>Salitreeniloki</h2>
+          <p class="section-desc">Luo täysin oma treeni ja valitse omat liikkeet ja laitteet, tai aloita valmiista treenipohjasta.</p>
         </div>
         <div class="workout-actions">
           <button class="btn btn-primary" id="btn-start-custom-workout">
@@ -549,6 +549,7 @@
                 <option value="Pull / Vetävät">Pull / Vetävät (Selkä, Hauis)</option>
                 <option value="Legs / Jalat & Vatsat">Legs / Jalat & Vatsat</option>
                 <option value="Full Body / Koko keho">Full Body / Koko keho</option>
+                <option value="Laitetreeni / Salilaitteet">Laitetreeni / Salilaitteet (Koko keho)</option>
               </optgroup>
               <optgroup label="Omat tallennetut pohjat" id="custom-templates-optgroup" style="display: none;"></optgroup>
             </select>

@@ -17,51 +17,171 @@ const STORAGE_KEYS = {
   COACH_CHAT: 'makrovahti_coach_chat'
 };
 
-// Curated Gym Exercise Library categorized by muscle group
+// Comprehensive Gym Exercise & Machine Library categorized by muscle group
 const PRESET_EXERCISES = [
-  // Rinta
+  // --- RINTA (CHEST) ---
+  // Laitteet & taljat
+  { name: 'Rintaprässi laitteessa (Chest Press)', cat: 'Rinta' },
+  { name: 'Vinorintaprässi laitteessa (Incline Press)', cat: 'Rinta' },
+  { name: 'Alaviistorintaprässi laitteessa', cat: 'Rinta' },
+  { name: 'Pec deck -laite (Rintalähentäjä / Butterfly)', cat: 'Rinta' },
+  { name: 'Rintadippilaite (Seated Dip Machine)', cat: 'Rinta' },
+  { name: 'Smith-penkkipunnerrus', cat: 'Rinta' },
+  { name: 'Smith-vinopenkkipunnerrus', cat: 'Rinta' },
+  { name: 'Ristitaljapunnerrus ylhäältä (Cable Fly)', cat: 'Rinta' },
+  { name: 'Ristitaljapunnerrus alhaalta', cat: 'Rinta' },
+  { name: 'Ristitaljapunnerrus vaakatasossa', cat: 'Rinta' },
+  // Vapaat painot & kehonpaino
   { name: 'Penkkipunnerrus tangolla', cat: 'Rinta' },
+  { name: 'Vinopenkkipunnerrus tangolla', cat: 'Rinta' },
+  { name: 'Penkkipunnerrus käsipainoilla', cat: 'Rinta' },
   { name: 'Vinopenkkipunnerrus käsipainoilla', cat: 'Rinta' },
-  { name: 'Ristitaljapunnerrus', cat: 'Rinta' },
-  { name: 'Pec deck -laite', cat: 'Rinta' },
-  { name: 'Dippi (rinta/ojentaja)', cat: 'Rinta' },
+  { name: 'Alaviistopenkkipunnerrus käsipainoilla', cat: 'Rinta' },
+  { name: 'Vipunostot maaten käsipainoilla (Dumbbell Fly)', cat: 'Rinta' },
+  { name: 'Dippi omalla painolla tai lisäpainolla', cat: 'Rinta' },
   { name: 'Etunojapunnerrus', cat: 'Rinta' },
-  // Selkä
-  { name: 'Maastaveto', cat: 'Selkä' },
+
+  // --- SELKÄ (BACK) ---
+  // Ylätaljat & laitteet
+  { name: 'Ylätalja eteen (leveä myötäote)', cat: 'Selkä' },
+  { name: 'Ylätalja eteen (kapea lapiokahva / V-kahva)', cat: 'Selkä' },
+  { name: 'Ylätalja vastaotteella', cat: 'Selkä' },
+  { name: 'Ylätaljalaite (Iso-lateral Lat Pulldown)', cat: 'Selkä' },
+  { name: 'Yhden käden ylätalja taljassa', cat: 'Selkä' },
+  { name: 'Suorin käsin taljapainallus (Lat Pullover taljassa)', cat: 'Selkä' },
+  { name: 'Pullover-laite (Lat Pullover Machine)', cat: 'Selkä' },
+  { name: 'Leuanvetolaite kevennyksellä (Assisted Chin-up)', cat: 'Selkä' },
   { name: 'Leuanveto omalla painolla', cat: 'Selkä' },
   { name: 'Leuanveto lisäpainolla', cat: 'Selkä' },
-  { name: 'Kulmasoutu tangolla', cat: 'Selkä' },
-  { name: 'Alataljasoutu', cat: 'Selkä' },
-  { name: 'Ylätalja eteen', cat: 'Selkä' },
-  { name: 'T-kulmasoutu', cat: 'Selkä' },
-  // Jalat
+  // Soutulaitteet & alataljat
+  { name: 'Alataljasoutu (kapea kahva)', cat: 'Selkä' },
+  { name: 'Alataljasoutu (leveä ote)', cat: 'Selkä' },
+  { name: 'Tuettu soutulaite (Chest Supported Row)', cat: 'Selkä' },
+  { name: 'Iso-lateral soutulaite (Hammer Strength)', cat: 'Selkä' },
+  { name: 'T-kulmasoutulaite rintatuella', cat: 'Selkä' },
+  { name: 'Yhden käden alataljasoutu', cat: 'Selkä' },
+  { name: 'Kulmasoutu Smith-laitteessa', cat: 'Selkä' },
+  // Vapaat tangot & käsipainot
+  { name: 'Maastaveto tangolla', cat: 'Selkä' },
+  { name: 'Sumomaastaveto tangolla', cat: 'Selkä' },
+  { name: 'Kulmasoutu tangolla myötäotteella', cat: 'Selkä' },
+  { name: 'Kulmasoutu tangolla vastaotteella (Yates Row)', cat: 'Selkä' },
+  { name: 'Kulmasoutu käsipainolla penkkiin tuettuna', cat: 'Selkä' },
+  { name: 'Kulmasoutu kahdella käsipainolla vinopenkissä', cat: 'Selkä' },
+  { name: 'T-kulmasoutu vapaalla tangolla', cat: 'Selkä' },
+  { name: 'Epäkässoutu / kohautukset tangolla (Shrugs)', cat: 'Selkä' },
+  { name: 'Kohautukset käsipainoilla', cat: 'Selkä' },
+  { name: 'Selänojennuslaite (Back Extension Machine)', cat: 'Selkä' },
+  { name: 'Selänojennuspenkki (Hyperextension 45°)', cat: 'Selkä' },
+
+  // --- JALAT (LEGS & GLUTES) ---
+  // Prässit & kyykkylaitteet
+  { name: 'Jalkaprässi 45°', cat: 'Jalat' },
+  { name: 'Vaakajalkaprässi laitteessa', cat: 'Jalat' },
+  { name: 'Yhden jalan jalkaprässi', cat: 'Jalat' },
+  { name: 'Hack-kyykky laitteessa', cat: 'Jalat' },
+  { name: 'Käänteinen Hack-kyykky laitteessa', cat: 'Jalat' },
+  { name: 'Pendulum-kyykky laitteessa', cat: 'Jalat' },
+  { name: 'Smith-kyykky', cat: 'Jalat' },
+  { name: 'Belt squat -kyykkyvyölaite', cat: 'Jalat' },
+  { name: 'Reiden ojennus laitteessa (Leg Extension)', cat: 'Jalat' },
+  { name: 'Yhden jalan reiden ojennus laitteessa', cat: 'Jalat' },
+  { name: 'Sissy-kyykky telineessä', cat: 'Jalat' },
+  // Takareisi-, pakara- ja lonkkalaitteet
+  { name: 'Reiden koukistus maaten laitteessa (Lying Leg Curl)', cat: 'Jalat' },
+  { name: 'Reiden koukistus istuen laitteessa (Seated Leg Curl)', cat: 'Jalat' },
+  { name: 'Reiden koukistus seisten laitteessa', cat: 'Jalat' },
+  { name: 'Lantionnostolaite (Hip Thrust / Booty Builder)', cat: 'Jalat' },
+  { name: 'Pakarakone taaksepäin potkulla (Glute Kickback Machine)', cat: 'Jalat' },
+  { name: 'Reiden loitonnus laitteessa (Hip Abductor - ulkoreisi/pakara)', cat: 'Jalat' },
+  { name: 'Reiden lähennys laitteessa (Hip Adductor - sisäreisi)', cat: 'Jalat' },
+  { name: 'Taljapotku taakse pakaralle (Cable Kickback)', cat: 'Jalat' },
+  { name: 'Glute-ham raise (GHR -takareisilaite)', cat: 'Jalat' },
+  // Pohjelaitteet
+  { name: 'Pohjeprässi istuen laitteessa (Seated Calf Raise)', cat: 'Jalat' },
+  { name: 'Pohjekone seisten laitteessa (Standing Calf Raise)', cat: 'Jalat' },
+  { name: 'Pohjenousu jalkaprässissä', cat: 'Jalat' },
+  { name: 'Pohjenousu Smith-laitteessa korokkeelta', cat: 'Jalat' },
+  // Vapaat painot
   { name: 'Takakyykky tangolla', cat: 'Jalat' },
   { name: 'Etukyykky tangolla', cat: 'Jalat' },
-  { name: 'Jalkaprässi', cat: 'Jalat' },
-  { name: 'Reiden ojennus laitteessa', cat: 'Jalat' },
-  { name: 'Reiden koukistus laitteessa', cat: 'Jalat' },
-  { name: 'Romanialainen maastaveto', cat: 'Jalat' },
-  { name: 'Pohjenousu seisten', cat: 'Jalat' },
+  { name: 'Romanialainen maastaveto tangolla (RDL)', cat: 'Jalat' },
+  { name: 'Romanialainen maastaveto käsipainoilla', cat: 'Jalat' },
+  { name: 'Suorin jaloin maastaveto tangolla', cat: 'Jalat' },
+  { name: 'Lantionnosto tangolla (Barbell Hip Thrust)', cat: 'Jalat' },
+  { name: 'Bulgarialainen askelkyykky käsipainoilla', cat: 'Jalat' },
   { name: 'Askelkyykky käsipainoilla', cat: 'Jalat' },
-  // Olkapäät
-  { name: 'Pystypunnerrus tangolla', cat: 'Olkapäät' },
-  { name: 'Pystypunnerrus käsipainoilla', cat: 'Olkapäät' },
+  { name: 'Askelkyykkykävely käsipainoilla', cat: 'Jalat' },
+  { name: 'Maljakyykky käsipainolla / kahvakuulalla (Goblet Squat)', cat: 'Jalat' },
+
+  // --- OLKAPÄÄT (SHOULDERS) ---
+  // Laitteet & taljat
+  { name: 'Pystypunnerrus laitteessa (Shoulder Press Machine)', cat: 'Olkapäät' },
+  { name: 'Iso-lateral pystypunnerrus (Hammer Strength)', cat: 'Olkapäät' },
+  { name: 'Smith-pystypunnerrus istuen', cat: 'Olkapäät' },
+  { name: 'Vipunostolaite sivuille (Lateral Raise Machine)', cat: 'Olkapäät' },
+  { name: 'Takaolkapäälaite (Reverse Pec Deck)', cat: 'Olkapäät' },
+  { name: 'Face pull taljassa köydellä', cat: 'Olkapäät' },
+  { name: 'Vipunostot sivuille taljassa', cat: 'Olkapäät' },
+  { name: 'Vipunostot sivuille nojaten taljassa', cat: 'Olkapäät' },
+  { name: 'Takaolkapääsoutu taljassa köydellä tai leveällä tangolla', cat: 'Olkapäät' },
+  { name: 'Vipunostot taakse ristitaljassa', cat: 'Olkapäät' },
+  { name: 'Pystysoutu taljassa', cat: 'Olkapäät' },
+  // Vapaat painot
+  { name: 'Pystypunnerrus tangolla seisten (OHP)', cat: 'Olkapäät' },
+  { name: 'Pystypunnerrus tangolla istuen', cat: 'Olkapäät' },
+  { name: 'Pystypunnerrus käsipainoilla istuen', cat: 'Olkapäät' },
+  { name: 'Arnold-punnerrus käsipainoilla', cat: 'Olkapäät' },
   { name: 'Vipunostot sivuille käsipainoilla', cat: 'Olkapäät' },
-  { name: 'Face pull taljassa', cat: 'Olkapäät' },
-  { name: 'Pystysoutu taljassa tai tangolla', cat: 'Olkapäät' },
-  // Kädet
-  { name: 'Hauiskääntö tangolla', cat: 'Kädet' },
-  { name: 'Hauiskääntö käsipainoilla', cat: 'Kädet' },
-  { name: 'Hammer-hauiskääntö', cat: 'Kädet' },
-  { name: 'Hauiskääntö taljassa', cat: 'Kädet' },
-  { name: 'Ojentajapunnerrus taljassa', cat: 'Kädet' },
-  { name: 'Ranskalainen punnerrus', cat: 'Kädet' },
-  { name: 'Kapea penkkipunnerrus', cat: 'Kädet' },
-  // Keskivartalo
-  { name: 'Voimapyörä', cat: 'Keskivartalo' },
-  { name: 'Lankku', cat: 'Keskivartalo' },
-  { name: 'Jalkojen nosto roikkuen', cat: 'Keskivartalo' },
-  { name: 'Vatsarutistus taljassa', cat: 'Keskivartalo' }
+  { name: 'Vipunostot taakse käsipainoilla kulmassa', cat: 'Olkapäät' },
+  { name: 'Pystysoutu tangolla tai käsipainoilla', cat: 'Olkapäät' },
+  { name: 'Etunostot käsipainoilla tai levypainolla', cat: 'Olkapäät' },
+
+  // --- KÄDET (ARMS: BICEPS, TRICEPS & FOREARMS) ---
+  // Hauislaitteet & taljat
+  { name: 'Scott-hauiskääntö laitteessa (Preacher Curl Machine)', cat: 'Kädet' },
+  { name: 'Hauiskääntö taljassa suoralla tangolla', cat: 'Kädet' },
+  { name: 'Hauiskääntö taljassa köydellä', cat: 'Kädet' },
+  { name: 'Tuplahauiskääntö ristitaljassa ylhäältä', cat: 'Kädet' },
+  { name: 'Hammer-kääntö taljassa köydellä', cat: 'Kädet' },
+  // Hauis vapaat painot
+  { name: 'Hauiskääntö tangolla seisten', cat: 'Kädet' },
+  { name: 'Hauiskääntö mutkatangolla (EZ-tanko)', cat: 'Kädet' },
+  { name: 'Scott-hauiskääntö mutkatangolla', cat: 'Kädet' },
+  { name: 'Hauiskääntö käsipainoilla istuen tai seisten', cat: 'Kädet' },
+  { name: 'Hammer-hauiskääntö käsipainoilla', cat: 'Kädet' },
+  { name: 'Keskitetty hauiskääntö käsipainolla (Concentration Curl)', cat: 'Kädet' },
+  { name: 'Incline-hauiskääntö vinopenkissä käsipainoilla', cat: 'Kädet' },
+  // Ojentajalaitteet & taljat
+  { name: 'Ojentajapunnerrus laitteessa (Triceps Extension Machine)', cat: 'Kädet' },
+  { name: 'Dippilaite kevennyksellä (Assisted Dip Machine)', cat: 'Kädet' },
+  { name: 'Ojentajapunnerrus taljassa suoralla tangolla (Pushdown)', cat: 'Kädet' },
+  { name: 'Ojentajapunnerrus taljassa köydellä', cat: 'Kädet' },
+  { name: 'Ojentajapunnerrus taljassa pään yli (Overhead Cable Extension)', cat: 'Kädet' },
+  { name: 'Yhden käden ojentajapainallus taljassa', cat: 'Kädet' },
+  // Ojentaja vapaat painot
+  { name: 'Ranskalainen punnerrus mutkatangolla penkillä (Skull Crusher)', cat: 'Kädet' },
+  { name: 'Ranskalainen punnerrus käsipainoilla', cat: 'Kädet' },
+  { name: 'Kapea penkkipunnerrus tangolla', cat: 'Kädet' },
+  { name: 'Ojentajapunnerrus käsipainolla pään takaa', cat: 'Kädet' },
+  { name: 'Dippi penkillä tai telineessä', cat: 'Kädet' },
+  // Kyynärvarret
+  { name: 'Rannekääntö tangolla (myötä- ja vastaote)', cat: 'Kädet' },
+  { name: 'Rannekääntö taljassa', cat: 'Kädet' },
+  { name: 'Farmarikävely käsipainoilla (Farmer\'s Walk)', cat: 'Kädet' },
+
+  // --- KESKIVARTALO (CORE & ABS) ---
+  { name: 'Vatsarutistuslaite (Abdominal Crunch Machine)', cat: 'Keskivartalo' },
+  { name: 'Kiertolaite vatsalle (Rotary Torso Machine)', cat: 'Keskivartalo' },
+  { name: 'Vatsarutistus taljassa polviltaan (Cable Rope Crunch)', cat: 'Keskivartalo' },
+  { name: 'Woodchopper taljassa (Puunhakkaaja taljassa)', cat: 'Keskivartalo' },
+  { name: 'Jalkojen nosto telineessä (Captain\'s Chair)', cat: 'Keskivartalo' },
+  { name: 'Jalkojen nosto roikkuen tangossa', cat: 'Keskivartalo' },
+  { name: 'Voimapyörä polviltaan tai seisten (Ab Wheel)', cat: 'Keskivartalo' },
+  { name: 'Lankku (kyynärvarsilankku)', cat: 'Keskivartalo' },
+  { name: 'Kylkilankku', cat: 'Keskivartalo' },
+  { name: 'Istumaannousu vinopenkissä (Decline Sit-up)', cat: 'Keskivartalo' },
+  { name: 'Venäläinen kierto levypainolla (Russian Twist)', cat: 'Keskivartalo' }
 ];
 
 // Default generic food items for offline & quick demo use (no personal data)
@@ -480,9 +600,9 @@ function generateDemoData() {
   state.workouts = [];
 
   const workoutTemplates = [
-    { name: 'Push / Työntävät', exercises: ['Penkkipunnerrus tangolla', 'Pystypunnerrus tangolla', 'Ojentajapunnerrus taljassa'] },
-    { name: 'Pull / Vetävät', exercises: ['Maastaveto', 'Leuanveto lisäpainolla', 'Hauiskääntö tangolla'] },
-    { name: 'Legs / Jalat', exercises: ['Takakyykky tangolla', 'Jalkaprässi', 'Reiden koukistus laitteessa'] }
+    { name: 'Push / Työntävät', exercises: ['Penkkipunnerrus tangolla', 'Vinorintaprässi laitteessa (Incline Press)', 'Ojentajapunnerrus taljassa köydellä'] },
+    { name: 'Pull / Vetävät', exercises: ['Ylätalja eteen (leveä myötäote)', 'Tuettu soutulaite (Chest Supported Row)', 'Hauiskääntö tangolla seisten'] },
+    { name: 'Legs / Jalat', exercises: ['Takakyykky tangolla', 'Jalkaprässi 45°', 'Reiden ojennus laitteessa (Leg Extension)'] }
   ];
 
   for (let i = 29; i >= 0; i--) {
@@ -1407,13 +1527,15 @@ function bindStrongWorkoutEvents() {
     const templateName = el.workoutTemplateSelect.value || 'Oma salitreeni';
     let exercises = [];
     if (templateName === 'Push / Työntävät') {
-      exercises = ['Penkkipunnerrus tangolla', 'Pystypunnerrus tangolla', 'Ojentajapunnerrus taljassa'];
+      exercises = ['Penkkipunnerrus tangolla', 'Vinorintaprässi laitteessa (Incline Press)', 'Pystypunnerrus käsipainoilla', 'Vipunostot sivuille taljassa', 'Ojentajapunnerrus taljassa köydellä'];
     } else if (templateName === 'Pull / Vetävät') {
-      exercises = ['Maastaveto', 'Leuanveto lisäpainolla', 'Hauiskääntö tangolla'];
+      exercises = ['Ylätalja eteen (leveä myötäote)', 'Tuettu soutulaite (Chest Supported Row)', 'Alataljasoutu (kapea kahva)', 'Face pull taljassa köydellä', 'Hauiskääntö tangolla seisten'];
     } else if (templateName === 'Legs / Jalat & Vatsat') {
-      exercises = ['Takakyykky tangolla', 'Jalkaprässi', 'Reiden koukistus laitteessa'];
+      exercises = ['Jalkaprässi 45°', 'Hack-kyykky laitteessa', 'Reiden ojennus laitteessa (Leg Extension)', 'Reiden koukistus maaten laitteessa (Lying Leg Curl)', 'Pohjekone seisten laitteessa (Standing Calf Raise)', 'Vatsarutistuslaite (Abdominal Crunch Machine)'];
     } else if (templateName === 'Full Body / Koko keho') {
-      exercises = ['Takakyykky tangolla', 'Penkkipunnerrus tangolla', 'Leuanveto omalla painolla'];
+      exercises = ['Takakyykky tangolla', 'Penkkipunnerrus tangolla', 'Ylätalja eteen (leveä myötäote)', 'Pystypunnerrus käsipainoilla', 'Lankku (kyynärvarsilankku)'];
+    } else if (templateName === 'Laitetreeni / Salilaitteet') {
+      exercises = ['Rintaprässi laitteessa (Chest Press)', 'Tuettu soutulaite (Chest Supported Row)', 'Jalkaprässi 45°', 'Reiden ojennus laitteessa (Leg Extension)', 'Reiden koukistus maaten laitteessa (Lying Leg Curl)', 'Pec deck -laite (Rintalähentäjä / Butterfly)', 'Vatsarutistuslaite (Abdominal Crunch Machine)'];
     } else {
       const custom = (state.customTemplates || []).find(t => t.name === templateName);
       if (custom && custom.exercises) {
@@ -2270,7 +2392,7 @@ function handleQuickTopic(topic, label) {
       <p>Lihas kasvaa vain, jos sille annetaan uusi syy sopeutua:</p>
       <ul>
         <li><strong>Miten toteuttaa:</strong> Pyri lisäämään joko <strong>1 toisto enemmän</strong> samalla painolla tai lisäämään <strong>+1–2,5 kg</strong> tankoon viikosta toiseen.</li>
-        <li><strong>Hyödynnä Strong-treenilokia:</strong> Näet aina edellisen treenisi sarjat ja painot, joten tavoitteesi on yksinkertainen: tee vähän enemmän kuin viime kerralla!</li>
+        <li><strong>Hyödynnä treenilokia:</strong> Näet aina edellisen treenisi sarjat ja painot, joten tavoitteesi on yksinkertainen: tee vähän enemmän kuin viime kerralla!</li>
       </ul>
     `;
   }

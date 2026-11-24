@@ -1,6 +1,6 @@
 # ⚡ Kalori- ja Makrovahti (PWA)
 
-Yksityinen, selainpohjainen Lifesum- & Strong -hybridi henkilökohtaiseen ravitsemuksen, aamupainon, makrotavoitteiden ja salitreenien seurantaan.
+Yksityinen, selainpohjainen fitnesssovellus henkilökohtaiseen ravitsemuksen, aamupainon, makrotavoitteiden ja salitreenien seurantaan.
 
 🔒 **100 % yksityisyys (Zero-Leakage):** Kaikki tiedot (paino, ruoat, sarjat, muistiinpanot) tallentuvat ainoastaan käyttäjän omaan laitteeseen selaimen paikalliseen muistiin (`localStorage`). Sovelluksessa ei ole keskitettyä seurantapalvelinta, joten kenenkään henkilökohtaiset tiedot eivät voi sekoittua tai vuotaa, vaikka sovelluksen linkki jaettaisiin kavereille.
 
@@ -8,7 +8,7 @@ Yksityinen, selainpohjainen Lifesum- & Strong -hybridi henkilökohtaiseen ravits
 
 ## 🌟 Ominaisuudet
 
-1. **Lifesum-ravintoseuranta & Älykäs makrolaskuri**:
+1. **Älykäs ravintoseuranta & makrolaskuri**:
    - Oletuskaloritavoite (2400 kcal/pv, muokattavissa asetuksista).
    - Suositeltu proteiini: $2{,}0\text{ g} \times \text{paino}$ ($4\text{ kcal/g}$).
    - Suositeltu rasva: $0{,}8\text{ g} \times \text{paino}$ ($9\text{ kcal/g}$).
@@ -24,8 +24,8 @@ Yksityinen, selainpohjainen Lifesum- & Strong -hybridi henkilökohtaiseen ravits
    - Annoskokolaskuri (g) laskee makrot ateriaan.
    - Paikallinen tuotemuisti tallentaa skannatut ja itse luodut tuotteet laitteelle nopeaa hakua varten.
 
-3. **Strong-salitreenilogi & Lepotaukoajastin**:
-   - Treenipohjat (*Push / Työntävät*, *Pull / Vetävät*, *Legs / Jalat*, *Full Body / Koko keho*) tai vapaat liikkeet.
+3. **Salitreeniloki & Lepotaukoajastin**:
+   - Treenipohjat (*Push / Työntävät*, *Pull / Vetävät*, *Legs / Jalat*, *Full Body / Koko keho*, *Laitetreeni*) tai täysin omat valitut liikkeet ja salilaitteet.
    - Sarjojen kirjaus (kg, toistot, RPE) ja **edellisen treenin vertailu** (esim. *"Edellinen: 80 kg × 8"*).
    - **Automaattinen lepotaukoajastin**: Käynnistyy sarjan kuittaamisesta vihreäksi (60s, 90s, 120s, 180s, +30s) ja antaa äänimerkin (Web Audio API).
    - Tallentaa treenivolyymin ja keston.
@@ -109,7 +109,7 @@ Avaa selain osoitteessa:
 kalorilaskuri/
 ├── public/
 │   ├── index.html            # Käyttöliittymä, PWA-meta-tagit
-│   ├── app.js                # Asiakaspuolen tallennus, makrolaskuri, skanneri & Strong-loki
+│   ├── app.js                # Asiakaspuolen tallennus, makrolaskuri, skanneri & salitreeniloki
 │   ├── styles.css            # Mobiilioptimoitu tumma teema (notch- & touch-tuella)
 │   ├── sw.js                 # Service Worker offline-välimuistille
 │   ├── manifest.json         # Web App Manifest PWA-asennukseen
